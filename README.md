@@ -4,10 +4,10 @@
 
 - **插件包名**：`@local/dsh-todo`
 - **侧边栏 id**：`todos`（主面板 key 相同）
-- **数据文件**：`<工作区根目录>/todo-projects.json`
-- **路由**：`GET/POST /api/todo-project`
+- **数据文件**：`<工作区根目录>/dsh-todo.json`
+- **路由**：`GET/POST /api/dsh-todo`
 
-> 插件已更名为 `dsh-todo`，但**数据约定保持不变**：路由 `/api/todo-project`、数据文件 `todo-projects.json`、备份格式标识 `todo-project` 都沿用原名，所以已有待办数据无需迁移。
+> 早期版本用过 `todo-project` 这个名字（路由 `/api/todo-project`、数据文件 `todo-projects.json`、备份标识 `todo-project`），现已全部改为 `dsh-todo`。旧的备份文件仍可导入（导入时不校验 `format` 字段），但旧的数据文件需要手动改名：`mv todo-projects.json dsh-todo.json`。
 
 ---
 
@@ -39,7 +39,7 @@
 
 ```jsonc
 {
-  "format": "todo-project",
+  "format": "dsh-todo",
   "version": 1,
   "exportedAt": "2024-05-01T10:00:00.000Z",
   "projects": [ … ],
@@ -150,7 +150,7 @@ node build.mjs --check  # 检查产物是否最新（CI 用）
 
 ## Host 半部分 (`index.js`)
 
-- 数据文件默认是 `<workspace 根目录>/todo-projects.json`。`apply(ctx, config)` 会读取该行的 `config.fileName`
+- 数据文件默认是 `<workspace 根目录>/dsh-todo.json`。`apply(ctx, config)` 会读取该行的 `config.fileName`
   覆盖文件名（相对路径按工作区根目录解析，绝对路径原样使用），例如在 `cordis.patch.yml` 里：
 
   ```yaml
@@ -214,4 +214,4 @@ plugin_manager: install_bundle  target=/绝对路径/dsh-todo
 plugin_manager: remove_bundle  target=@local/dsh-todo
 ```
 
-数据文件不会删除；想清空就手动删掉 `todo-projects.json`。
+数据文件不会删除；想清空就手动删掉 `dsh-todo.json`。

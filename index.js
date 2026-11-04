@@ -3,8 +3,8 @@
  *
  * Owns the JSON data file and exposes it over one authenticated HTTP route that
  * the Client half talks to:
- *   GET  /api/todo-project  -> the stored state JSON ({ projects, todos, trash })
- *   POST /api/todo-project  -> replace the stored state with the request body
+ *   GET  /api/dsh-todo  -> the stored state JSON ({ projects, todos, trash })
+ *   POST /api/dsh-todo  -> replace the stored state with the request body
  *
  * Every Client change POSTs the full state, so the JSON file on disk is always
  * the current copy. Writes go to a temporary file first and are then renamed,
@@ -16,8 +16,8 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 export const name = 'dsh-todo';
 export const inject = ['webServer', 'connection'];
 
-const ROUTE_PATH = '/api/todo-project';
-const DEFAULT_FILE_NAME = 'todo-projects.json';
+const ROUTE_PATH = '/api/dsh-todo';
+const DEFAULT_FILE_NAME = 'dsh-todo.json';
 
 export function apply(ctx, config = {}) {
   const workingDirectory = ctx.get('workingDirectory');

@@ -26,13 +26,13 @@ window.__ModuleLoader__.load({
     const PANEL_ID = 'todos';
 
     /** Locale namespace these dictionaries register under. */
-    const NS = 'todoProject';
+    const NS = 'dshTodo';
 
     /** Panellist order among the shipped sidebar icons. */
     const PANEL_ORDER = 20;
 
     /** Host route that reads and writes the JSON data file. */
-    const STATE_URL = '/api/todo-project';
+    const STATE_URL = '/api/dsh-todo';
 
     /** Stable key for the fixed "Default" group (no project). */
     const NO_PROJECT = '__none__';
@@ -279,7 +279,7 @@ window.__ModuleLoader__.load({
      * without guessing:
      *
      *   {
-     *     "format": "todo-project",
+     *     "format": "dsh-todo",
      *     "version": 1,
      *     "exportedAt": "2024-05-01T10:00:00.000Z",
      *     "projects": [{ "id": "p1", "name": "Work" }],
@@ -295,7 +295,7 @@ window.__ModuleLoader__.load({
      * duplicate silently and nothing existing is overwritten.
      */
 
-    const BACKUP_FORMAT = 'todo-project';
+    const BACKUP_FORMAT = 'dsh-todo';
     const BACKUP_VERSION = 1;
 
     /** A file name that sorts by date: `memos-2024-05-01.json`. */
