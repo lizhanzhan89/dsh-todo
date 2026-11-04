@@ -34,6 +34,9 @@ smoke-*.mjs
 # Harness plugin local state
 # The data file lives in the workspace root, never in the package, but ignore it
 # here too in case a working copy is opened from a profile data directory.
+dsh-todo.json
+dsh-todo.json.*.tmp
+# Legacy data file name, from before the rename.
 todo-projects.json
 todo-projects.json.*.tmp
 

@@ -6,7 +6,7 @@
  * without guessing:
  *
  *   {
- *     "format": "todo-project",
+ *     "format": "dsh-todo",
  *     "version": 1,
  *     "exportedAt": "2024-05-01T10:00:00.000Z",
  *     "projects": [{ "id": "p1", "name": "Work" }],
@@ -22,7 +22,7 @@
  * duplicate silently and nothing existing is overwritten.
  */
 
-const BACKUP_FORMAT = 'todo-project';
+const BACKUP_FORMAT = 'dsh-todo';
 const BACKUP_VERSION = 1;
 
 /** A file name that sorts by date: `memos-2024-05-01.json`. */
