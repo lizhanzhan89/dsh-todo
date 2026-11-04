@@ -188,6 +188,9 @@ function TodoPage(props) {
   // imported id is remapped so a second import cannot duplicate onto the first.
   const [exporting, setExporting] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
+  // The sync button writes on demand and reports the result, unlike the silent
+  // auto-save in the effect above.
+  const [syncing, setSyncing] = React.useState(false);
   const [notice, setNotice] = React.useState(null);
 
   // Success notices fade after a few seconds; errors stay until dismissed so a
@@ -250,6 +253,25 @@ function TodoPage(props) {
       setNotice({ kind: 'error', text: t('importFailed', { error: 'read error' }) });
     };
     reader.readAsText(file);
+  };
+
+  // Write the current state to the JSON data file and say so. Every change
+  // already saves automatically, so this is a confirmation control: it forces a
+  // write right now and surfaces a failure that the silent auto-save hides.
+  const syncNow = () => {
+    if (syncing) return;
+    setSyncing(true);
+    const counts = {
+      projects: state.projects.length,
+      items: state.todos.length,
+      trash: state.trash.length,
+    };
+    syncState(state)
+      .then((result) => {
+        if (result.ok) setNotice({ kind: 'ok', text: t('syncDone', counts) });
+        else setNotice({ kind: 'error', text: t(result.error || 'syncFailed') });
+      })
+      .finally(() => setSyncing(false));
   };
 
   // --- derived values -------------------------------------------------------
@@ -316,7 +338,7 @@ function TodoPage(props) {
     startEdit, cancelEdit, commitEdit,
     itemDragProps, itemDragClass,
     addProject,
-    exporting, exportData, importing, importFile,
+    exporting, exportData, importing, importFile, syncing, syncNow,
   };
 
   // The title row holds the heading and the search field; search filters the

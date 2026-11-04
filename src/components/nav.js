@@ -144,7 +144,7 @@ function createProjectControl(api) {
  * they belong to the store's footer rather than to any one group.
  */
 function dataControls(api) {
-  const { t, exporting, exportData, importFile, importing } = api;
+  const { t, exporting, exportData, importFile, importing, syncing, syncNow } = api;
 
   const fileInput = h('input', {
     type: 'file',
@@ -159,6 +159,15 @@ function dataControls(api) {
   });
 
   return h('div', { className: 'tp-nav-data' },
+    h('button', {
+      type: 'button',
+      className: 'tp-btn tp-nav-data-btn' + (syncing ? ' is-busy' : ''),
+      title: t('syncHint'),
+      'aria-label': t('syncHint'),
+      'aria-busy': syncing ? 'true' : 'false',
+      disabled: syncing,
+      onClick: syncNow,
+    }, h(SyncIcon, { size: 13 }), t('sync')),
     h('button', {
       type: 'button',
       className: 'tp-btn tp-nav-data-btn',

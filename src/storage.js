@@ -54,3 +54,27 @@ async function saveState(state) {
     });
   } catch (e) { /* ignore transient network errors */ }
 }
+
+/**
+ * The same request, but it reports what happened.
+ *
+ * `saveState` above is fire-and-forget: it runs on every keystroke-level change
+ * and a transient failure would only produce noise. The sync button is a
+ * deliberate, user-initiated action, so it needs a real answer to show.
+ *
+ * @param {object} state the state to write
+ * @returns {Promise<{ ok: boolean, error?: string }>} `error` is a locale key
+ */
+async function syncState(state) {
+  try {
+    const res = await fetch(STATE_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(state),
+    });
+    if (!res || !res.ok) return { ok: false, error: 'syncFailed' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'syncFailed' };
+  }
+}

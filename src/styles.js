@@ -34,7 +34,8 @@ const CSS = `
 .tp-nav-foot{flex:none;padding:8px;border-top:.5px solid var(--dsw-alias-border-l1)}
 /* Export and import share one row above "New project". */
 .tp-nav-data{display:flex;gap:6px;margin-bottom:6px}
-.tp-nav-data-btn{flex:1;justify-content:center;min-width:0;height:30px;padding:0 8px;font-size:12px;gap:5px}
+.tp-nav-data-btn{flex:1;justify-content:center;min-width:0;height:30px;padding:0 6px;font-size:12px;gap:4px;white-space:nowrap}
+.tp-nav-data-btn svg{flex:none}
 .tp-nav-data-btn:disabled,.tp-nav-data-btn.is-busy{cursor:default;opacity:.55}
 .tp-nav-data-btn:disabled:hover,.tp-nav-data-btn.is-busy:hover{background:var(--dsw-alias-bg-layer-1);border-color:var(--dsw-alias-border-l2)}
 label.tp-nav-data-btn{cursor:pointer}
