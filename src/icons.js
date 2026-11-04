@@ -56,3 +56,17 @@ function UploadIcon({ size = 13 }) {
     h('path', { d: 'M8 10.5V3M5 5.8l3-3 3 3', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
     h('path', { d: 'M2.8 12.6h10.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
 }
+
+/** Two arrows chasing each other in a circle: "sync". */
+function SyncIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('path', {
+      d: 'M13 8a5 5 0 0 1-8.4 3.6M3 8a5 5 0 0 1 8.4-3.6',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 1.5,
+      strokeLinecap: 'round',
+    }),
+    h('path', { d: 'M11.4 1.9v2.7H8.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+    h('path', { d: 'M4.6 14.1v-2.7h2.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+}

@@ -120,6 +120,10 @@ window.__ModuleLoader__.load({
       export: 'Export',
       exportHint: 'Download every project, todo, note and recycle-bin item as one JSON file.',
       exportDone: 'Exported {projects} projects, {items} items and {trash} recycle-bin records.',
+      sync: 'Sync',
+      syncHint: 'Write the current content to the JSON data file now. Changes save automatically; this button confirms the write.',
+      syncDone: 'Synced to the JSON file: {projects} projects, {items} items, {trash} recycle-bin records.',
+      syncFailed: 'Sync failed. Check that the service is running.',
       import: 'Import',
       importHint: 'Add projects and items from a JSON backup file. Existing items are kept.',
       importDone: 'Imported {projects} projects, {items} items and {trash} recycle-bin records.',
@@ -200,6 +204,10 @@ window.__ModuleLoader__.load({
       export: '导出',
       exportHint: '把全部项目、待办、笔记和回收站内容导出为一个 JSON 文件。',
       exportDone: '已导出 {projects} 个项目、{items} 个条目和 {trash} 条回收站记录。',
+      sync: '同步',
+      syncHint: '立刻把当前内容写入 JSON 数据文件。改动本来就会自动保存，这个按钮用于确认写入成功。',
+      syncDone: '已同步到 JSON 文件：{projects} 个项目、{items} 个条目、{trash} 条回收站记录。',
+      syncFailed: '同步失败，请检查服务是否在运行。',
       import: '导入',
       importHint: '从 JSON 备份文件导入项目与条目，已有内容会保留。',
       importDone: '已导入 {projects} 个项目、{items} 个条目和 {trash} 条回收站记录。',
@@ -266,6 +274,30 @@ window.__ModuleLoader__.load({
           body: JSON.stringify(state),
         });
       } catch (e) { /* ignore transient network errors */ }
+    }
+
+    /**
+     * The same request, but it reports what happened.
+     *
+     * `saveState` above is fire-and-forget: it runs on every keystroke-level change
+     * and a transient failure would only produce noise. The sync button is a
+     * deliberate, user-initiated action, so it needs a real answer to show.
+     *
+     * @param {object} state the state to write
+     * @returns {Promise<{ ok: boolean, error?: string }>} `error` is a locale key
+     */
+    async function syncState(state) {
+      try {
+        const res = await fetch(STATE_URL, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(state),
+        });
+        if (!res || !res.ok) return { ok: false, error: 'syncFailed' };
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: 'syncFailed' };
+      }
     }
 
     /* ---------------------------------------------------------------------- */
@@ -506,7 +538,8 @@ window.__ModuleLoader__.load({
     .tp-nav-foot{flex:none;padding:8px;border-top:.5px solid var(--dsw-alias-border-l1)}
     /* Export and import share one row above "New project". */
     .tp-nav-data{display:flex;gap:6px;margin-bottom:6px}
-    .tp-nav-data-btn{flex:1;justify-content:center;min-width:0;height:30px;padding:0 8px;font-size:12px;gap:5px}
+    .tp-nav-data-btn{flex:1;justify-content:center;min-width:0;height:30px;padding:0 6px;font-size:12px;gap:4px;white-space:nowrap}
+    .tp-nav-data-btn svg{flex:none}
     .tp-nav-data-btn:disabled,.tp-nav-data-btn.is-busy{cursor:default;opacity:.55}
     .tp-nav-data-btn:disabled:hover,.tp-nav-data-btn.is-busy:hover{background:var(--dsw-alias-bg-layer-1);border-color:var(--dsw-alias-border-l2)}
     label.tp-nav-data-btn{cursor:pointer}
@@ -670,6 +703,20 @@ window.__ModuleLoader__.load({
       return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
         h('path', { d: 'M8 10.5V3M5 5.8l3-3 3 3', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
         h('path', { d: 'M2.8 12.6h10.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+    }
+
+    /** Two arrows chasing each other in a circle: "sync". */
+    function SyncIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('path', {
+          d: 'M13 8a5 5 0 0 1-8.4 3.6M3 8a5 5 0 0 1 8.4-3.6',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.5,
+          strokeLinecap: 'round',
+        }),
+        h('path', { d: 'M11.4 1.9v2.7H8.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M4.6 14.1v-2.7h2.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }));
     }
 
     /* ---------------------------------------------------------------------- */
@@ -1271,7 +1318,7 @@ window.__ModuleLoader__.load({
      * they belong to the store's footer rather than to any one group.
      */
     function dataControls(api) {
-      const { t, exporting, exportData, importFile, importing } = api;
+      const { t, exporting, exportData, importFile, importing, syncing, syncNow } = api;
 
       const fileInput = h('input', {
         type: 'file',
@@ -1286,6 +1333,15 @@ window.__ModuleLoader__.load({
       });
 
       return h('div', { className: 'tp-nav-data' },
+        h('button', {
+          type: 'button',
+          className: 'tp-btn tp-nav-data-btn' + (syncing ? ' is-busy' : ''),
+          title: t('syncHint'),
+          'aria-label': t('syncHint'),
+          'aria-busy': syncing ? 'true' : 'false',
+          disabled: syncing,
+          onClick: syncNow,
+        }, h(SyncIcon, { size: 13 }), t('sync')),
         h('button', {
           type: 'button',
           className: 'tp-btn tp-nav-data-btn',
@@ -1639,6 +1695,9 @@ window.__ModuleLoader__.load({
       // imported id is remapped so a second import cannot duplicate onto the first.
       const [exporting, setExporting] = React.useState(false);
       const [importing, setImporting] = React.useState(false);
+      // The sync button writes on demand and reports the result, unlike the silent
+      // auto-save in the effect above.
+      const [syncing, setSyncing] = React.useState(false);
       const [notice, setNotice] = React.useState(null);
 
       // Success notices fade after a few seconds; errors stay until dismissed so a
@@ -1701,6 +1760,25 @@ window.__ModuleLoader__.load({
           setNotice({ kind: 'error', text: t('importFailed', { error: 'read error' }) });
         };
         reader.readAsText(file);
+      };
+
+      // Write the current state to the JSON data file and say so. Every change
+      // already saves automatically, so this is a confirmation control: it forces a
+      // write right now and surfaces a failure that the silent auto-save hides.
+      const syncNow = () => {
+        if (syncing) return;
+        setSyncing(true);
+        const counts = {
+          projects: state.projects.length,
+          items: state.todos.length,
+          trash: state.trash.length,
+        };
+        syncState(state)
+          .then((result) => {
+            if (result.ok) setNotice({ kind: 'ok', text: t('syncDone', counts) });
+            else setNotice({ kind: 'error', text: t(result.error || 'syncFailed') });
+          })
+          .finally(() => setSyncing(false));
       };
 
       // --- derived values -------------------------------------------------------
@@ -1767,7 +1845,7 @@ window.__ModuleLoader__.load({
         startEdit, cancelEdit, commitEdit,
         itemDragProps, itemDragClass,
         addProject,
-        exporting, exportData, importing, importFile,
+        exporting, exportData, importing, importFile, syncing, syncNow,
       };
 
       // The title row holds the heading and the search field; search filters the
