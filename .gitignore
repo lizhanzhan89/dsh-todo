@@ -1,0 +1,43 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+
+# Node
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+.npm/
+.pnpm-store/
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+*~
+
+# Test and build scratch output
+/dist/
+/coverage/
+*.tsbuildinfo
+smoke-*.mjs
+
+# Harness plugin local state
+# The data file lives in the workspace root, never in the package, but ignore it
+# here too in case a working copy is opened from a profile data directory.
+todo-projects.json
+todo-projects.json.*.tmp
+
+# Note: client/index.js is intentionally NOT ignored.
+# It is the browser artifact the Harness loads, and local directory installs
+# link this checkout directly, so the committed file must stay up to date.
+# Regenerate it with `node build.mjs` and verify with `node build.mjs --check`.

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Todo Projects">
+  <rect x="6" y="6" width="52" height="52" rx="14" fill="#247bbf"/>
+  <path d="M17 24.5l4 4 7-8" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17 40.5l4 4 7-8" fill="none" stroke="#bfe0ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M35 25h12M35 41h12" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+</svg>
