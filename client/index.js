@@ -1,5 +1,5 @@
 /**
- * Client half of the Memos bundle (sidebar panel "todos").
+ * Client half of the Memo bundle (sidebar panel "todos").
  *
  * GENERATED FILE — do not edit. Sources live in `src/`; run
  * `node build.mjs` from the package root to regenerate this file.
@@ -64,7 +64,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-05.5';
+    const BUILD = '2026-11-05.6';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -75,8 +75,8 @@ window.__ModuleLoader__.load({
      * `{name}`, `{count}`, `{time}` and `{query}` are replaced by the caller.
      */
     const en = {
-      panel: 'Memos',
-      title: 'Memos',
+      panel: 'Memo',
+      title: 'Memo',
       subtitle: 'Todos and notes, organized by project.',
       noProject: 'Default',
       noProjectHint: 'Todos that belong to no project.',
@@ -153,7 +153,7 @@ window.__ModuleLoader__.load({
       import: 'Import',
       importHint: 'Add projects and items from a JSON backup file. Existing items are kept.',
       importDone: 'Imported {projects} projects, {items} items and {trash} recycle-bin records.',
-      importInvalid: 'That file is not a Memos backup.',
+      importInvalid: 'That file is not a Memo backup.',
       importEmpty: 'That backup contains no projects or todos.',
       importFailed: 'Import failed: {error}',
     };
@@ -165,8 +165,8 @@ window.__ModuleLoader__.load({
      * Chinese copy (default UI language here). Keys must stay in step with `en.js`.
      */
     const zh = {
-      panel: '备忘录',
-      title: '备忘录',
+      panel: '备忘',
+      title: '备忘',
       subtitle: '按项目分组的待办与笔记。',
       noProject: '默认',
       noProjectHint: '不属于任何项目的待办。',
@@ -243,7 +243,7 @@ window.__ModuleLoader__.load({
       import: '导入',
       importHint: '从 JSON 备份文件导入项目与条目，已有内容会保留。',
       importDone: '已导入 {projects} 个项目、{items} 个条目和 {trash} 条回收站记录。',
-      importInvalid: '这个文件不是备忘录的备份文件。',
+      importInvalid: '这个文件不是备忘的备份文件。',
       importEmpty: '这个备份里没有项目或待办。',
       importFailed: '导入失败：{error}',
     };
@@ -371,10 +371,10 @@ window.__ModuleLoader__.load({
     const BACKUP_FORMAT = 'dsh-todo';
     const BACKUP_VERSION = 1;
 
-    /** A file name that sorts by date: `memos-2024-05-01.json`. */
+    /** A file name that sorts by date: `dsh-todo-2024-05-01.json`. */
     function backupFileName(date = new Date()) {
       const pad = (n) => String(n).padStart(2, '0');
-      return 'memos-' + date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + '.json';
+      return 'dsh-todo-' + date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + '.json';
     }
 
     /** The document written by "export". */
