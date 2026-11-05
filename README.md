@@ -1,6 +1,9 @@
 # 备忘录 (Memos)
 
-侧边栏里的待办 + 笔记面板。按项目分组，支持拖动排序、搜索、回收站和就地编辑。
+Harness 侧边栏里的待办 + 笔记面板。按项目分组，支持多行条目、拖动排序、搜索、回收站和就地编辑；
+数据存为工作区里的一个 JSON 文件，不依赖任何网络服务。
+
+> GitHub 仓库描述、Topics 和简介文案在 [DESCRIPTION.md](DESCRIPTION.md)，可以直接复制粘贴。
 
 - **插件包名**：`@local/dsh-todo`
 - **侧边栏 id**：`todos`（主面板 key 相同）
@@ -127,6 +130,7 @@ dsh-todo/
 ├── locale/
 │   ├── en.json           # 插件管理页显示的标题/描述（英文）
 │   └── zh.json           # 同上（中文）
+├── DESCRIPTION.md        # 给 GitHub 用的仓库描述 / Topics / 简介文案
 ├── build.mjs             # 把 src/ 拼成 client/index.js
 ├── client/
 │   └── index.js          # ← 生成物，浏览器实际加载的产物
