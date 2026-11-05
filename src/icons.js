@@ -43,6 +43,49 @@ function TodoIcon({ size = 18 }) {
     h('path', { d: 'M12 8h8M12 17h8', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' }));
 }
 
+/* --- tab glyphs ---------------------------------------------------------- */
+
+/** "Not done": an empty circle. */
+function CircleIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('circle', { cx: 8, cy: 8, r: 5.2, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }));
+}
+
+/** "Done": a circle with a tick inside. */
+function DoneCircleIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('circle', { cx: 8, cy: 8, r: 5.2, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }),
+    h('path', { d: 'M5.6 8.2l1.7 1.7 3.2-3.6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+}
+
+/** "Notes": a page with a folded corner and two lines. */
+function NoteIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('path', { d: 'M4 2.6h5l3 3v7.8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3.6a1 1 0 0 1 1-1z', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+    h('path', { d: 'M9 2.7v3h3', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+    h('path', { d: 'M5.6 9h4.8M5.6 11.3h3.2', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round' }));
+}
+
+/** "All": a stacked pair of lists. */
+function StackIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('path', { d: 'M2.6 5.2h10.8M2.6 8h10.8M2.6 10.8h7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+}
+
+/**
+ * The leading badge that marks a row's kind in the combined "All" tab.
+ * The icon doubles as the tab glyph of that kind, so a row's badge and its tab
+ * look the same.
+ */
+function KindBadge({ kind, label, size = 14 }) {
+  const Icon = kind === KIND_ENTRY ? NoteIcon : DoneCircleIcon;
+  return h('span', {
+    className: 'tp-kind tp-kind-' + (kind === KIND_ENTRY ? 'note' : 'todo'),
+    title: label,
+    'aria-label': label,
+  }, h(Icon, { size }));
+}
+
 /** Download arrow into a tray: "export". */
 function DownloadIcon({ size = 13 }) {
   return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },

@@ -140,20 +140,28 @@ function emptyTrash(state) {
   return { ...state, trash: [] };
 }
 
+/** Whether two items belong to the same group, whatever their kind. */
+const sameGroup = (a, b) => projectIdOf(a) === projectIdOf(b);
+
 /** Whether two items may sit in the same list: same group and same kind. */
-const sameList = (a, b) =>
-  projectIdOf(a) === projectIdOf(b) && isEntry(a) === isEntry(b);
+const sameList = (a, b) => sameGroup(a, b) && isEntry(a) === isEntry(b);
 
 /**
  * Drag-and-drop: take the dragged item's slot and insert it where the drop
  * target sat. Cross-list drops are ignored.
+ *
+ * `mixed` relaxes the kind check so a note can be dropped among todos: the
+ * combined "All" tab lists both kinds in one column, and there a note and a
+ * todo are neighbours. The group still has to match, so a row never moves to
+ * another project by accident.
  */
-function reorderItem(state, sourceId, targetId) {
+function reorderItem(state, sourceId, targetId, mixed) {
   if (!sourceId || !targetId || sourceId === targetId) return state;
   const from = state.todos.findIndex((item) => item.id === sourceId);
   const to = state.todos.findIndex((item) => item.id === targetId);
   if (from === -1 || to === -1) return state;
-  if (!sameList(state.todos[from], state.todos[to])) return state;
+  const allowed = mixed ? sameGroup : sameList;
+  if (!allowed(state.todos[from], state.todos[to])) return state;
   const next = state.todos.slice();
   const [moved] = next.splice(from, 1);
   next.splice(to, 0, moved);

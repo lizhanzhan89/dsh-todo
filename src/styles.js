@@ -82,12 +82,19 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
 .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
 .tp-todos{list-style:none;margin:0;padding:6px}
-.tp-todo{display:flex;align-items:flex-start;gap:10px;padding:8px;border-radius:10px}
+.tp-todo{display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 6px;border-radius:10px;border-left:2px solid transparent;transition:background .12s,border-color .12s}
 .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
+/* Every row carries a left accent so it reads as one block rather than as loose
+   text: todos take the brand colour, notes a neutral one, done rows go green. */
+.tp-todo.is-todo{border-left-color:var(--dsw-alias-brand-primary)}
+.tp-todo.tp-entry{border-left-color:var(--dsw-alias-border-l1)}
+.tp-todo.is-done{border-left-color:var(--dsw-alias-state-success-primary)}
 .tp-check{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l1);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#fff}
 .tp-check.is-done{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}
 .tp-check:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
 .tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px}
+.tp-todo.is-todo .tp-todo-text{font-weight:500}
+.tp-todo.tp-entry .tp-todo-text{font-size:13.5px}
 .tp-editable{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
 .tp-editable:hover{background:var(--dsw-alias-bg-base);box-shadow:0 0 0 1px var(--dsw-alias-border-l1)}
 .tp-edit-input{height:28px;font-size:14px;padding:0 8px;margin:-3px 0}
@@ -102,20 +109,28 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-empty strong{display:block;margin-bottom:4px;color:var(--dsw-alias-label-primary);font-weight:500}
 .tp-muted{color:var(--dsw-alias-label-secondary)}
 .tp-tabs{display:flex;align-items:center;gap:4px;padding:0}
-.tp-tab{height:28px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer;padding:0 10px;border-radius:14px;display:inline-flex;align-items:center;gap:6px}
+.tp-tab{height:28px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer;padding:0 8px;border-radius:14px;display:inline-flex;align-items:center;gap:5px}
+.tp-tab svg{flex:none;opacity:.85}
+.tp-tab.is-active svg{opacity:1}
 .tp-tab:hover{background:var(--dsw-alias-bg-layer-2)}
 .tp-tab.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 .tp-tab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
 .tp-tab-count{color:var(--dsw-alias-label-secondary);font-size:12px;font-variant-numeric:tabular-nums}
 .tp-todo-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.tp-entry{padding-left:12px}
-.tp-todo.is-draggable{cursor:grab}
-.tp-todo.is-draggable:active{cursor:grabbing}
+/* The grip is the only draggable element, so it always shows a grab cursor even
+   while invisible, which tells the mouse where a drag can start. */
+.tp-row-grip{flex:none;width:12px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:22px;cursor:grab;opacity:0;transition:opacity .12s;text-align:center;user-select:none}
+.tp-row-grip:active{cursor:grabbing}
+.tp-todo:hover .tp-row-grip,.tp-todo.is-dragging .tp-row-grip{opacity:1}
 .tp-todo.is-dragging{opacity:.45}
 .tp-todo.is-drop-target{box-shadow:inset 0 2px 0 0 var(--dsw-alias-brand-primary)}
-.tp-row-grip{flex:none;width:10px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:22px;opacity:0;transition:opacity .12s}
-.tp-todo:hover .tp-row-grip,.tp-todo.is-dragging .tp-row-grip{opacity:1}
 .tp-todo-time{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:16px}
+/* Kind badge: only the combined "All" tab shows one, because only there do
+   todos and notes share a column. */
+.tp-kind{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-top:1px;border-radius:6px}
+.tp-kind-todo{color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2)}
+.tp-kind-note{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1)}
+.tp-todos.is-mixed .tp-todo.has-kind{padding-left:4px;gap:8px}
 .tp-nav-trash{margin-top:6px;padding-top:9px;border-top:.5px solid var(--dsw-alias-border-l1);border-radius:0 0 8px 8px}
 .tp-nav-trash-icon{flex:none;display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary)}
 .tp-head-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
