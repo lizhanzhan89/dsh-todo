@@ -34,11 +34,11 @@ function renderGroup(group, api) {
   const tab = tabFor(group.id);
   const isAllTab = tab === TAB_ALL;
   const isEntriesTab = tab === TAB_ENTRIES;
-
-  // Notes first, then open todos, then finished todos. A note is reference
-  // material and is read before the work it explains; open work outranks the
-  // archive, so finished todos sink to the bottom of the tab.
-  const allRows = noteItems.concat(active, done);
+  // The "All" tab is a review of the whole group and normally includes finished
+  // todos, but a full archive can bury the live work: the toggle in that tab's
+  // header hides them again. The flag is the one saved with the data.
+  const withDone = isAllTab ? api.includeDone : true;
+  const allRows = withDone ? noteItems.concat(active, done) : noteItems.concat(active);
   const inTab = isAllTab ? allRows : tab === TAB_DONE ? done : isEntriesTab ? noteItems : active;
 
   // Searching looks at todos, notes and completed todos at once, so the matching
@@ -51,6 +51,8 @@ function renderGroup(group, api) {
   // its header and tabs, and only the visible rows change.
   const groupHit = api.searching && api.matches(group.name);
 
+  // The badge counts what the tab would list, so hiding finished todos is
+  // visible in the number instead of only in the list.
   // While searching, each tab badge counts the matches of that kind rather than
   // every stored row, so the numbers match what is displayed.
   const hitCount = (predicate) => (api.searching ? hits.filter(predicate).length : null);
@@ -93,6 +95,20 @@ function renderGroup(group, api) {
         : (todoItems.length === 0 ? t('emptyHint') : t('activeEmptyHint'));
   const emptyBlock = shown.length === 0 && !groupHit
     ? h('div', { className: 'tp-empty' }, h('strong', null, emptyTitle), emptyHint)
+    : null;
+
+  // The "All" tab hides finished todos through this toggle rather than through
+  // the global search switch: they are separate questions ("show the archive
+  // here" vs "match the archive too").
+  const doneToggle = isAllTab
+    ? h('label', { className: 'tp-inline-toggle', title: t('showDoneInAll') },
+        h('input', {
+          type: 'checkbox',
+          className: 'tp-search-check',
+          checked: api.includeDone,
+          onChange: (event) => api.setIncludeDone(Boolean(event.target.checked)),
+        }),
+        h('span', null, t('showDoneInAll')))
     : null;
 
   const placeholder = isEntriesTab ? t('addNotePlaceholder') : t('addTodoPlaceholder');
@@ -147,6 +163,7 @@ function renderGroup(group, api) {
       h('div', { className: 'tp-group-center' },
         h('h2', { className: 'tp-group-title' }, group.name)),
       h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
+    doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
     h('div', { className: 'tp-group-body' },
       h('ul', { className: 'tp-todos' + (isAllTab ? ' is-mixed' : '') },
         shown.map((item) => renderRow(item, api, rowOptions))),

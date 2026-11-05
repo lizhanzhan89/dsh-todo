@@ -34,6 +34,7 @@ const en = {
   tabActive: 'Active',
   tabDone: 'Completed',
   tabEntries: 'Notes',
+  showDoneInAll: 'Completed',
   kindTodo: 'Todo',
   kindNote: 'Note',
   allEmpty: 'This group is still empty',

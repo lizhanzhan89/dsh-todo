@@ -53,19 +53,10 @@ window.__ModuleLoader__.load({
     /**
      * Text rows the inline editor opens with. An item may span many lines, so the
      * field shows three of them and scrolls beyond that instead of growing, which
-     * keeps a row's height predictable while editing.
+     * keeps a row's height predictable while editing. A shorter item gets a shorter
+     * field: the editor is sized to the text, never taller than this.
      */
     const EDIT_ROWS = 3;
-
-    /**
-     * Chars shown on one line of a collapsed multi-line row before it is cut. A
-     * textarea's `cols` is measured in characters, so the cut has to be made in
-     * characters too: the long line is what would otherwise blow the row's height.
-     */
-    const COLLAPSED_CHARS = 58;
-
-    /** Text lines shown by a collapsed multi-line row; the rest is cut with "…". */
-    const COLLAPSED_LINES = 3;
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -106,6 +97,7 @@ window.__ModuleLoader__.load({
       tabActive: 'Active',
       tabDone: 'Completed',
       tabEntries: 'Notes',
+      showDoneInAll: 'Completed',
       kindTodo: 'Todo',
       kindNote: 'Note',
       allEmpty: 'This group is still empty',
@@ -195,6 +187,7 @@ window.__ModuleLoader__.load({
       tabActive: '未完成',
       tabDone: '已完成',
       tabEntries: '笔记',
+      showDoneInAll: '包含已完成',
       kindTodo: '待办',
       kindNote: '笔记',
       allEmpty: '这一组还是空的',
@@ -261,9 +254,15 @@ window.__ModuleLoader__.load({
      * current copy and no merge logic is needed.
      */
 
-    /** A new state with nothing in it. */
+    /**
+     * A new state with nothing in it.
+     *
+     * `includeDone` is a preference, not data, but it lives in the same file: it
+     * decides whether the combined "All" tab lists finished todos, and that is a
+     * per-user choice worth keeping across reloads.
+     */
     function emptyState() {
-      return { projects: [], todos: [], trash: [] };
+      return { projects: [], todos: [], trash: [], includeDone: true };
     }
 
     /** Coerce whatever came back from disk into the shape the page expects. */
@@ -273,6 +272,9 @@ window.__ModuleLoader__.load({
         todos: Array.isArray(parsed && parsed.todos) ? parsed.todos : [],
         // The recycle bin: deleted items and projects kept for restoring.
         trash: Array.isArray(parsed && parsed.trash) ? parsed.trash : [],
+        // A file written before this flag existed has no value; default to showing
+        // finished todos, which is what those versions did.
+        includeDone: !(parsed && parsed.includeDone === false),
       };
     }
 
@@ -568,7 +570,11 @@ window.__ModuleLoader__.load({
     .tp-nav-empty{padding:8px 12px;color:var(--dsw-alias-label-secondary);font-size:12px}
     .tp-nav-foot{flex:none;padding:8px;border-top:.5px solid var(--dsw-alias-border-l1)}
     /* Export and import share one row above "New project". */
-    .tp-nav-data{display:flex;gap:6px;margin-bottom:6px}
+    .tp-nav-data{display:flex;gap:6px;margin:0 0 8px;padding:6px;border-radius:10px}
+    /* The wash behind these buttons is the area's, so the buttons themselves stay
+       transparent until hovered. */
+    .tp-nav-data .tp-btn{background:transparent;border-color:transparent}
+    .tp-nav-data .tp-btn:hover{background:var(--dsw-alias-bg-base);border-color:var(--dsw-alias-border-l1)}
     .tp-nav-data-btn{flex:1;justify-content:center;min-width:0;height:30px;padding:0 6px;font-size:12px;gap:4px;white-space:nowrap}
     .tp-nav-data-btn svg{flex:none}
     .tp-nav-data-btn:disabled,.tp-nav-data-btn.is-busy{cursor:default;opacity:.55}
@@ -620,20 +626,30 @@ window.__ModuleLoader__.load({
     .tp-todo{position:relative;display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 12px;border-radius:10px;transition:background .12s}
     /* Hover deepens the wash slightly instead of swapping in a token colour, which
        would replace the kind's tint with a neutral one on every mouse-over. */
+    /* Each row carries a faint wash instead of the old left bar: it marks the row
+       without an edge that has to line up with anything. Hover swaps in a token
+       layer, which reads as "this one" rather than as a different kind of row.
+       The wash itself is set inline per kind (see rowTint in components/row.js),
+       because it differs per kind and React owns that value. */
+    .tp-todo{touch-action:manipulation}
     .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
     .tp-check{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l1);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#fff}
     .tp-check.is-done{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}
     .tp-check:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
-    /* pre-wrap keeps the newlines a user typed and still wraps long lines. */
+    /* pre-wrap keeps the newlines a user typed and still wraps long lines. The row
+       shows the whole item: it is the record, and hiding part of it behind an
+       ellipsis makes a three-line note look like a truncated one. Only the editor
+       is bounded to three rows. */
     .tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px;white-space:pre-wrap}
     .tp-todo.is-todo .tp-todo-text{font-weight:500}
     .tp-todo.tp-entry .tp-todo-text{font-size:13.5px;color:var(--dsw-alias-label-secondary)}
     .tp-editable{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
     .tp-editable:hover{background:var(--dsw-alias-bg-base);box-shadow:0 0 0 1px var(--dsw-alias-border-l1)}
-    /* The inline editor is three text rows tall whatever the text length: it shows
-       a multi-line item without a scrollbar, and scrolls past that instead of
-       pushing the rest of the list down while typing. */
-    .tp-edit-input{height:auto;min-height:68px;max-height:68px;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow-y:auto;font-family:inherit}
+    /* The inline editor is sized in JS to the text it holds: one row for a short
+       item, up to three, then it scrolls. A fixed three-row field was tried first
+       and left two empty rows under a one-line todo. The row height is the same
+       68px ceiling, so the list does not jump when the editor opens. */
+    .tp-edit-input{height:auto;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow-y:auto;max-height:68px;font-family:inherit}
     .tp-edit-btn{opacity:0;transition:opacity .12s}
     .tp-todo:hover .tp-edit-btn,.tp-edit-btn:focus-visible{opacity:1}
     .tp-todo.is-done .tp-todo-text{color:var(--dsw-alias-label-secondary);text-decoration:line-through}
@@ -644,6 +660,10 @@ window.__ModuleLoader__.load({
        line, growing to a small ceiling before it scrolls. */
     .tp-add-inline textarea.tp-add-input{height:auto;min-height:30px;max-height:96px;line-height:20px;padding:5px 10px;resize:none;overflow-y:auto;font-family:inherit}
     .tp-add-inline .tp-btn{height:30px;padding:0 10px;font-size:13px;flex:none;align-self:flex-start}
+    /* A strip under the group header for the "All" tab's own switch. */
+    .tp-group-tools{display:flex;justify-content:flex-end;padding:6px 14px 0}
+    .tp-inline-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:pointer;user-select:none}
+    .tp-inline-toggle:hover{color:var(--dsw-alias-label-primary)}
     .tp-empty{padding:26px 16px;text-align:center;color:var(--dsw-alias-label-secondary);font-size:13px}
     .tp-empty strong{display:block;margin-bottom:4px;color:var(--dsw-alias-label-primary);font-weight:500}
     .tp-muted{color:var(--dsw-alias-label-secondary)}
@@ -865,6 +885,13 @@ window.__ModuleLoader__.load({
     /** A note (plain text, no checkbox) rather than a todo. */
     const isEntry = (item) => item.kind === KIND_ENTRY;
 
+    /**
+     * Whether the combined "All" tab lists finished todos. That tab is a review of
+     * the whole group, so it can hold the archive; the saved flag is only the
+     * starting point, and the tab's own toggle edits it.
+     */
+    const showDoneInAll = (state) => state.includeDone !== false;
+
     /** Key used for drafts, tabs and group anchors: project id or the default slot. */
     const groupKey = (projectId) => projectId || NO_PROJECT;
 
@@ -899,6 +926,11 @@ window.__ModuleLoader__.load({
           return { ...todo, done, completedAt: done ? now() : null };
         }),
       };
+    }
+
+    /** Flip whether finished todos appear in the combined "All" tab. */
+    function setIncludeDoneFlag(state, include) {
+      return { ...state, includeDone: !!include };
     }
 
     /** Replace an item's text. Blank text is rejected by the caller. */
@@ -1061,31 +1093,28 @@ window.__ModuleLoader__.load({
     const canEdit = (item) => !item.done;
 
     /**
-     * The text of a collapsed row.
-     *
-     * `pre-wrap` keeps every newline, but an unbounded item would push one row to
-     * the height of the whole note. Lines are cut on their own rather than with a
-     * CSS line clamp, which would also cut the line horizontally: a long line is
-     * sliced at COLLAPSED_CHARS, and past COLLAPSED_LINES lines the last shown line
-     * ends in an ellipsis. The full text stays in `item.text`, in the editor and in
-     * the tooltip.
+     * Lines the editor needs for this text, counting wrapped lines, capped at
+     * EDIT_ROWS. A short item gets a short field; a long one scrolls inside three
+     * rows. `wrapAt` is the field's text columns, measured from its width and font
+     * so a wrapped line is not mistaken for a short one.
      */
-    function collapsedText(text) {
-      const lines = String(text == null ? '' : text).split('\n');
-      const shown = lines.slice(0, COLLAPSED_LINES).map((line) =>
-        (line.length > COLLAPSED_CHARS ? line.slice(0, COLLAPSED_CHARS) + '…' : line));
-      if (lines.length > COLLAPSED_LINES) shown[shown.length - 1] += '…';
-      return shown.join('\n');
+    function editorRows(text, wrapAt) {
+      const cols = Math.max(12, wrapAt | 0);
+      let rows = 0;
+      String(text == null ? '' : text).split('\n').forEach((line) => {
+        // An empty line still takes one row.
+        rows += Math.max(1, Math.ceil(line.length / cols));
+      });
+      return Math.min(EDIT_ROWS, Math.max(1, rows));
     }
 
     /**
      * The text of a row: an editor while that row is being edited, otherwise a span
      * that opens the editor on double-click, or a locked span when read-only.
      *
-     * The editor is a textarea fixed at three text rows: an item may span many
-     * lines, and a one-row field would show only the first one, while growing
-     * without a cap would shove the rest of the list around. Past three lines it
-     * scrolls, so the row keeps a predictable height.
+     * The row itself shows the whole text, newlines and all. Only the editor is
+     * bounded: it opens as tall as the text needs and never taller than EDIT_ROWS,
+     * scrolling past that, so typing into a long item does not push the list around.
      *
      * @param {object} item the todo or note
      * @param {object} api  { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t }
@@ -1094,9 +1123,11 @@ window.__ModuleLoader__.load({
       const { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t } = api;
       if (editingId === item.id && canEdit(item)) {
         // Enter inserts a newline and Ctrl/Cmd+Enter saves, matching the add field.
+        // `rows` follows the text: a two-line item gets a two-row field.
+        const rows = editorRows(editDraft, api.editCols());
         return h('textarea', {
           className: 'tp-input tp-edit-input',
-          rows: EDIT_ROWS,
+          rows,
           autoFocus: true,
           value: editDraft,
           onChange: (event) => setEditDraft(event.target.value),
@@ -1117,13 +1148,34 @@ window.__ModuleLoader__.load({
         return h('span', {
           className: 'tp-todo-text tp-locked',
           title: t('editLocked'),
-        }, collapsedText(item.text));
+        }, item.text);
       }
       return h('span', {
         className: 'tp-todo-text tp-editable',
-        title: item.text,
+        title: t('editHint'),
         onDoubleClick: () => startEdit(item),
-      }, collapsedText(item.text));
+      }, item.text);
+    }
+
+    /**
+     * The row's faint wash, by kind. Hex tints at low alpha rather than theme
+     * tokens: the alias tokens swing hard between light and dark, and the note grey
+     * has to stay grey in both. At .06–.1 the value is not readable as a colour,
+     * only as a fill that separates one row from the next.
+     *
+     * Notes are given the strongest and greyest wash on purpose: they carry no
+     * checkbox, so colour is what says "this one is a note" at a glance.
+     */
+    const TINT = {
+      todo: 'rgb(96 138 235 / .07)',
+      done: 'rgb(84 168 112 / .06)',
+      note: 'rgb(118 122 130 / .12)',
+    };
+
+    /** The wash for a row, from the row's own kind. */
+    function rowTint(isTodo, isDone) {
+      const key = isTodo ? (isDone ? 'done' : 'todo') : 'note';
+      return { background: TINT[key] };
     }
 
     /**
@@ -1145,6 +1197,7 @@ window.__ModuleLoader__.load({
       return h('li', {
         key: item.id,
         className: 'tp-todo tp-entry' + (withKind ? ' has-kind' : '') + api.itemDragClass(item),
+        style: rowTint(false, false),
         ...api.itemDragProps(item),
       },
         renderGrip(item, api),
@@ -1174,6 +1227,7 @@ window.__ModuleLoader__.load({
       return h('li', {
         key: todo.id,
         className: 'tp-todo is-todo' + (withKind ? ' has-kind' : '') + (todo.done ? ' is-done' : '') + api.itemDragClass(todo),
+        style: rowTint(true, todo.done),
         ...api.itemDragProps(todo),
       },
         renderGrip(todo, api),
@@ -1256,11 +1310,11 @@ window.__ModuleLoader__.load({
       const tab = tabFor(group.id);
       const isAllTab = tab === TAB_ALL;
       const isEntriesTab = tab === TAB_ENTRIES;
-
-      // Notes first, then open todos, then finished todos. A note is reference
-      // material and is read before the work it explains; open work outranks the
-      // archive, so finished todos sink to the bottom of the tab.
-      const allRows = noteItems.concat(active, done);
+      // The "All" tab is a review of the whole group and normally includes finished
+      // todos, but a full archive can bury the live work: the toggle in that tab's
+      // header hides them again. The flag is the one saved with the data.
+      const withDone = isAllTab ? api.includeDone : true;
+      const allRows = withDone ? noteItems.concat(active, done) : noteItems.concat(active);
       const inTab = isAllTab ? allRows : tab === TAB_DONE ? done : isEntriesTab ? noteItems : active;
 
       // Searching looks at todos, notes and completed todos at once, so the matching
@@ -1273,6 +1327,8 @@ window.__ModuleLoader__.load({
       // its header and tabs, and only the visible rows change.
       const groupHit = api.searching && api.matches(group.name);
 
+      // The badge counts what the tab would list, so hiding finished todos is
+      // visible in the number instead of only in the list.
       // While searching, each tab badge counts the matches of that kind rather than
       // every stored row, so the numbers match what is displayed.
       const hitCount = (predicate) => (api.searching ? hits.filter(predicate).length : null);
@@ -1315,6 +1371,20 @@ window.__ModuleLoader__.load({
             : (todoItems.length === 0 ? t('emptyHint') : t('activeEmptyHint'));
       const emptyBlock = shown.length === 0 && !groupHit
         ? h('div', { className: 'tp-empty' }, h('strong', null, emptyTitle), emptyHint)
+        : null;
+
+      // The "All" tab hides finished todos through this toggle rather than through
+      // the global search switch: they are separate questions ("show the archive
+      // here" vs "match the archive too").
+      const doneToggle = isAllTab
+        ? h('label', { className: 'tp-inline-toggle', title: t('showDoneInAll') },
+            h('input', {
+              type: 'checkbox',
+              className: 'tp-search-check',
+              checked: api.includeDone,
+              onChange: (event) => api.setIncludeDone(Boolean(event.target.checked)),
+            }),
+            h('span', null, t('showDoneInAll')))
         : null;
 
       const placeholder = isEntriesTab ? t('addNotePlaceholder') : t('addTodoPlaceholder');
@@ -1369,6 +1439,7 @@ window.__ModuleLoader__.load({
           h('div', { className: 'tp-group-center' },
             h('h2', { className: 'tp-group-title' }, group.name)),
           h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
+        doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
         h('div', { className: 'tp-group-body' },
           h('ul', { className: 'tp-todos' + (isAllTab ? ' is-mixed' : '') },
             shown.map((item) => renderRow(item, api, rowOptions))),
@@ -1538,7 +1609,9 @@ window.__ModuleLoader__.load({
         },
       });
 
-      return h('div', { className: 'tp-nav-data' },
+      // The three buttons act on the whole store, so they get a wash of their own
+      // and read as one area rather than as three loose buttons.
+      return h('div', { className: 'tp-nav-data', style: rowTint(false, false) },
         h('button', {
           type: 'button',
           className: 'tp-btn tp-nav-data-btn' + (syncing ? ' is-busy' : ''),
@@ -1746,8 +1819,10 @@ window.__ModuleLoader__.load({
       const [view, setView] = React.useState('board');
       // Search across every todo, entry and project name.
       const [query, setQuery] = React.useState('');
-      // Completed todos stay hidden from search results unless this is ticked.
-      const [includeDone, setIncludeDone] = React.useState(false);
+      // Completed todos stay hidden from search results unless this is ticked. The
+      // value is stored in the data file (`includeDone`), so it is read from the
+      // loaded state rather than kept as local UI state, and the toggle writes it
+      // back like any other edit.
       // Inline editing: the id of the row being edited and its draft text.
       const [editingId, setEditingId] = React.useState(null);
       const [editDraft, setEditDraft] = React.useState('');
@@ -1992,6 +2067,12 @@ window.__ModuleLoader__.load({
 
       // --- derived values -------------------------------------------------------
       const groups = groupList(state, t('noProject'));
+      // The flag decides whether finished todos appear in the combined "All" tab
+      // and in search results. It is read straight from the state, so the file is
+      // the single source of truth and the toggle needs no extra sync.
+      const includeDone = state.includeDone !== false;
+      // The transition is named differently because this handler shadows it.
+      const setIncludeDone = (value) => update((prev) => setIncludeDoneFlag(prev, value));
       const needle = query.trim().toLowerCase();
       const searching = needle.length > 0;
       const matches = (text) => String(text || '').toLowerCase().includes(needle);
@@ -2002,6 +2083,28 @@ window.__ModuleLoader__.load({
         ? 0
         : state.todos.filter((item) => visibleInSearch(item) && matches(item.text)).length
           + state.projects.filter((project) => matches(project.name)).length;
+
+      /**
+       * Text columns available to the inline editor, measured from the actual
+       * field: its width minus padding and border, divided by the width of one
+       * character in the field's own font. Reading the live element avoids guessing
+       * at font metrics; the fallback covers a row that is not in the DOM yet.
+       */
+      const editCols = () => {
+        if (typeof document === 'undefined' || typeof document.querySelector !== 'function') return 30;
+        const field = document.querySelector('.tp-edit-input');
+        if (!field || !field.getBoundingClientRect) return 30;
+        const style = typeof getComputedStyle === 'function' ? getComputedStyle(field) : null;
+        const padding = style ? parseFloat(style.paddingLeft || 0) + parseFloat(style.paddingRight || 0) : 16;
+        const border = style ? parseFloat(style.borderLeftWidth || 0) + parseFloat(style.borderRightWidth || 0) : 1;
+        const width = field.getBoundingClientRect().width - padding - border;
+        if (!(width > 0)) return 30;
+        // A monospace-ish estimate from the computed font size: that is close
+        // enough to decide how many rows a line wraps into.
+        const fontSize = style ? parseFloat(style.fontSize || 14) : 14;
+        const perChar = fontSize * 0.55;
+        return Math.max(12, Math.floor(width / perChar));
+      };
 
       // --- drag handlers shared by todo and note rows ---------------------------
       // Only the grip starts a drag: the <li> itself is not draggable, so text
@@ -2071,7 +2174,7 @@ window.__ModuleLoader__.load({
       // React hooks themselves and stay easy to reason about.
       const api = {
         t, state, groups, view, activeGroup,
-        setView, setQuery, query, includeDone, setIncludeDone,
+        setView, setQuery, query, includeDone, setIncludeDone, editCols,
         setDragId, setDropId, dragId, dropId, setDragOverTrash, dragOverTrash,
         creatingProject, setCreatingProject, projectDraft, setProjectDraft,
         editingId, editDraft, setEditDraft,

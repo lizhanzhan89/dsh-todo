@@ -9,9 +9,15 @@
  * current copy and no merge logic is needed.
  */
 
-/** A new state with nothing in it. */
+/**
+ * A new state with nothing in it.
+ *
+ * `includeDone` is a preference, not data, but it lives in the same file: it
+ * decides whether the combined "All" tab lists finished todos, and that is a
+ * per-user choice worth keeping across reloads.
+ */
 function emptyState() {
-  return { projects: [], todos: [], trash: [] };
+  return { projects: [], todos: [], trash: [], includeDone: true };
 }
 
 /** Coerce whatever came back from disk into the shape the page expects. */
@@ -21,6 +27,9 @@ function normalizeState(parsed) {
     todos: Array.isArray(parsed && parsed.todos) ? parsed.todos : [],
     // The recycle bin: deleted items and projects kept for restoring.
     trash: Array.isArray(parsed && parsed.trash) ? parsed.trash : [],
+    // A file written before this flag existed has no value; default to showing
+    // finished todos, which is what those versions did.
+    includeDone: !(parsed && parsed.includeDone === false),
   };
 }
 
