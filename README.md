@@ -1,6 +1,6 @@
-# 备忘 (Memo)
+# 待办 (dsh-todo)
 
-Harness 侧边栏里的待办 + 笔记面板：待办和笔记放在同一个面板里、按项目分块管理。
+Harness 侧边栏里的事项面板，待办和笔记放在一起，按项目分块管理。
 
 适合这样一个场景——事情分散在几个项目里，还有一堆不属于任何项目的小事，
 不想为它们各开一个应用。所以这里的"项目"只是分组，不是工程：新建一个项目就是起个名字，
@@ -45,7 +45,7 @@ plugin_manager: install_bundle  target=/绝对路径/dsh-todo
 ```
 
 放在文稿目录，不放在工作区：工作区是随时会被清空、克隆、切换的地方，
-而备忘是个人数据，得活过这些操作。
+而待办是个人数据，得活过这些操作。
 
 想换位置（比如放进网盘同步目录），在 `cordis.patch.yml` 里给这一行加 `fileName`：
 
@@ -53,7 +53,7 @@ plugin_manager: install_bundle  target=/绝对路径/dsh-todo
 - id: dsh-todo
   name: '@local/dsh-todo'
   config:
-    fileName: /Users/me/OneDrive/memo.json   # 绝对路径，原样使用
+    fileName: /Users/me/OneDrive/todo.json   # 绝对路径，原样使用
 ```
 
 相对路径按文稿目录解析，不是工作区。这是普通的运行时读取，不是 Cordis 的 `Config` schema
@@ -154,7 +154,7 @@ plugin_manager: install_bundle  target=/绝对路径/dsh-todo
 | 同名项目 | 两个都保留（项目靠 id 区分，不靠名字） |
 | 条目所属项目不存在 | 落到「默认」组 |
 | 导入两次同一个文件 | 出现两份，但 id 全部重新生成，不会互相覆盖 |
-| 文件不是 JSON / 不是备忘备份 / 没有任何条目 | 拒绝导入，状态完全不变，右下角显示错误提示 |
+| 文件不是 JSON / 不是待办备份 / 没有任何条目 | 拒绝导入，状态完全不变，右下角显示错误提示 |
 | 裸状态文件（没有 `format` 信封、没有 `trash`） | 接受，按待办处理 |
 | 结构损坏的单行 | 丢弃该行，其余照常导入 |
 
