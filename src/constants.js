@@ -44,4 +44,4 @@ const EDIT_ROWS = 3;
  * a fix "does not apply" this number says whether the browser got the new code
  * at all. It is a diagnostic, not a release number.
  */
-const BUILD = '2026-11-05.4';
+const BUILD = '2026-11-05.5';
