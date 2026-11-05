@@ -50,6 +50,23 @@ window.__ModuleLoader__.load({
     const KIND_TODO = 'todo';
     const KIND_ENTRY = 'entry';
 
+    /**
+     * Text rows the inline editor opens with. An item may span many lines, so the
+     * field shows three of them and scrolls beyond that instead of growing, which
+     * keeps a row's height predictable while editing.
+     */
+    const EDIT_ROWS = 3;
+
+    /**
+     * Chars shown on one line of a collapsed multi-line row before it is cut. A
+     * textarea's `cols` is measured in characters, so the cut has to be made in
+     * characters too: the long line is what would otherwise blow the row's height.
+     */
+    const COLLAPSED_CHARS = 58;
+
+    /** Text lines shown by a collapsed multi-line row; the rest is cut with "…". */
+    const COLLAPSED_LINES = 3;
+
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
     /* ---------------------------------------------------------------------- */
@@ -68,7 +85,7 @@ window.__ModuleLoader__.load({
       projectNamePlaceholder: 'Project name',
       create: 'Create',
       cancel: 'Cancel',
-      addTodoPlaceholder: 'Add a todo and press Enter',
+      addTodoPlaceholder: 'Add a todo — Ctrl+Enter saves',
       add: 'Add',
       delete: 'Delete',
       edit: 'Edit',
@@ -95,7 +112,7 @@ window.__ModuleLoader__.load({
       allEmptyHint: 'Todos and notes both show up here.',
       entriesEmpty: 'No notes yet',
       entriesEmptyHint: 'Notes added here stay as plain text, shown without a checkbox.',
-      addNotePlaceholder: 'Add a note and press Enter',
+      addNotePlaceholder: 'Add a note — Ctrl+Enter saves',
       addNote: 'Add note',
       activeEmpty: 'Nothing active here',
       activeEmptyHint: 'Add a todo below, or check off the ones you finished.',
@@ -157,7 +174,7 @@ window.__ModuleLoader__.load({
       projectNamePlaceholder: '项目名称',
       create: '创建',
       cancel: '取消',
-      addTodoPlaceholder: '添加待办，回车确认',
+      addTodoPlaceholder: '添加待办，Ctrl+回车保存',
       add: '添加',
       delete: '删除',
       edit: '编辑',
@@ -184,7 +201,7 @@ window.__ModuleLoader__.load({
       allEmptyHint: '待办和笔记都会显示在这里。',
       entriesEmpty: '还没有笔记',
       entriesEmptyHint: '在这里添加的笔记是普通文字，不显示复选框。',
-      addNotePlaceholder: '添加笔记，回车确认',
+      addNotePlaceholder: '添加笔记，Ctrl+回车保存',
       addNote: '添加笔记',
       activeEmpty: '暂无未完成待办',
       activeEmptyHint: '在下方添加一条待办，或勾选已完成的项。',
@@ -599,27 +616,24 @@ window.__ModuleLoader__.load({
     .tp-icon-btn{flex:none;width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
     .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
     .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
-    .tp-todos{list-style:none;margin:0;padding:6px}
+    .tp-todos{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:4px}
     .tp-todo{position:relative;display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 12px;border-radius:10px;transition:background .12s}
+    /* Hover deepens the wash slightly instead of swapping in a token colour, which
+       would replace the kind's tint with a neutral one on every mouse-over. */
     .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
-    /* The accent bar is a pseudo-element inset from the row's own top and bottom,
-       not a left border: a border runs the full height, so stacked rows joined into
-       one unbroken line. Insetting it keeps neighbouring bars visibly separate. */
-    .tp-todo::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:1px;background:transparent;transition:background .12s}
-    .tp-todo.is-todo::before{background:var(--dsw-alias-brand-primary)}
-    .tp-todo.tp-entry::before{background:var(--dsw-alias-border-l1)}
-    .tp-todo.is-done::before{background:var(--dsw-alias-state-success-primary)}
     .tp-check{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l1);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#fff}
     .tp-check.is-done{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}
     .tp-check:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
     /* pre-wrap keeps the newlines a user typed and still wraps long lines. */
     .tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px;white-space:pre-wrap}
     .tp-todo.is-todo .tp-todo-text{font-weight:500}
-    .tp-todo.tp-entry .tp-todo-text{font-size:13.5px}
+    .tp-todo.tp-entry .tp-todo-text{font-size:13.5px;color:var(--dsw-alias-label-secondary)}
     .tp-editable{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
     .tp-editable:hover{background:var(--dsw-alias-bg-base);box-shadow:0 0 0 1px var(--dsw-alias-border-l1)}
-    /* The inline editor grows with its text instead of staying one line high. */
-    .tp-edit-input{min-height:28px;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow:hidden;font-family:inherit}
+    /* The inline editor is three text rows tall whatever the text length: it shows
+       a multi-line item without a scrollbar, and scrolls past that instead of
+       pushing the rest of the list down while typing. */
+    .tp-edit-input{height:auto;min-height:68px;max-height:68px;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow-y:auto;font-family:inherit}
     .tp-edit-btn{opacity:0;transition:opacity .12s}
     .tp-todo:hover .tp-edit-btn,.tp-edit-btn:focus-visible{opacity:1}
     .tp-todo.is-done .tp-todo-text{color:var(--dsw-alias-label-secondary);text-decoration:line-through}
@@ -633,12 +647,12 @@ window.__ModuleLoader__.load({
     .tp-empty{padding:26px 16px;text-align:center;color:var(--dsw-alias-label-secondary);font-size:13px}
     .tp-empty strong{display:block;margin-bottom:4px;color:var(--dsw-alias-label-primary);font-weight:500}
     .tp-muted{color:var(--dsw-alias-label-secondary)}
-    .tp-tabs{display:flex;align-items:center;gap:4px;padding:0}
-    .tp-tab{height:28px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer;padding:0 8px;border-radius:14px;display:inline-flex;align-items:center;gap:5px}
+    .tp-tabs{display:flex;align-items:center;gap:4px;padding:0;min-width:0;flex-wrap:wrap}
+    .tp-tab{height:28px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer;padding:0 8px;border-radius:14px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
     .tp-tab svg{flex:none;opacity:.85}
     .tp-tab.is-active svg{opacity:1}
     .tp-tab:hover{background:var(--dsw-alias-bg-layer-2)}
-    .tp-tab.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+    .tp-tab.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-weight:500}
     .tp-tab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
     .tp-tab-count{color:var(--dsw-alias-label-secondary);font-size:12px;font-variant-numeric:tabular-nums}
     .tp-todo-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
@@ -767,9 +781,9 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The leading badge that marks a row's kind in the combined "All" tab.
-     * The icon doubles as the tab glyph of that kind, so a row's badge and its tab
-     * look the same.
+     * The leading badge that marks a row's kind in the combined "All" tab. The icon
+     * doubles as the tab glyph of that kind, so a row's badge and its tab look the
+     * same.
      */
     function KindBadge({ kind, label, size = 14 }) {
       // A todo takes the empty checkbox rather than the ticked one: a badge says
@@ -1002,8 +1016,7 @@ window.__ModuleLoader__.load({
       const from = state.todos.findIndex((item) => item.id === sourceId);
       const to = state.todos.findIndex((item) => item.id === targetId);
       if (from === -1 || to === -1) return state;
-      const allowed = mixed ? sameGroup : sameList;
-      if (!allowed(state.todos[from], state.todos[to])) return state;
+      if (!(mixed ? sameGroup : sameList)(state.todos[from], state.todos[to])) return state;
       const next = state.todos.slice();
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
@@ -1048,8 +1061,31 @@ window.__ModuleLoader__.load({
     const canEdit = (item) => !item.done;
 
     /**
-     * Row text. While that row is being edited it becomes an input; otherwise it is
-     * a span that opens the editor on double-click, or a locked span when read-only.
+     * The text of a collapsed row.
+     *
+     * `pre-wrap` keeps every newline, but an unbounded item would push one row to
+     * the height of the whole note. Lines are cut on their own rather than with a
+     * CSS line clamp, which would also cut the line horizontally: a long line is
+     * sliced at COLLAPSED_CHARS, and past COLLAPSED_LINES lines the last shown line
+     * ends in an ellipsis. The full text stays in `item.text`, in the editor and in
+     * the tooltip.
+     */
+    function collapsedText(text) {
+      const lines = String(text == null ? '' : text).split('\n');
+      const shown = lines.slice(0, COLLAPSED_LINES).map((line) =>
+        (line.length > COLLAPSED_CHARS ? line.slice(0, COLLAPSED_CHARS) + '…' : line));
+      if (lines.length > COLLAPSED_LINES) shown[shown.length - 1] += '…';
+      return shown.join('\n');
+    }
+
+    /**
+     * The text of a row: an editor while that row is being edited, otherwise a span
+     * that opens the editor on double-click, or a locked span when read-only.
+     *
+     * The editor is a textarea fixed at three text rows: an item may span many
+     * lines, and a one-row field would show only the first one, while growing
+     * without a cap would shove the rest of the list around. Past three lines it
+     * scrolls, so the row keeps a predictable height.
      *
      * @param {object} item the todo or note
      * @param {object} api  { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t }
@@ -1057,11 +1093,10 @@ window.__ModuleLoader__.load({
     function editableText(item, api) {
       const { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t } = api;
       if (editingId === item.id && canEdit(item)) {
-        // A textarea, not an input: a todo or note may span several lines. Enter
-        // inserts a newline and Ctrl/Cmd+Enter saves, matching the add field.
+        // Enter inserts a newline and Ctrl/Cmd+Enter saves, matching the add field.
         return h('textarea', {
           className: 'tp-input tp-edit-input',
-          rows: 1,
+          rows: EDIT_ROWS,
           autoFocus: true,
           value: editDraft,
           onChange: (event) => setEditDraft(event.target.value),
@@ -1082,13 +1117,13 @@ window.__ModuleLoader__.load({
         return h('span', {
           className: 'tp-todo-text tp-locked',
           title: t('editLocked'),
-        }, item.text);
+        }, collapsedText(item.text));
       }
       return h('span', {
         className: 'tp-todo-text tp-editable',
-        title: t('editHint'),
+        title: item.text,
         onDoubleClick: () => startEdit(item),
-      }, item.text);
+      }, collapsedText(item.text));
     }
 
     /**
@@ -1222,9 +1257,10 @@ window.__ModuleLoader__.load({
       const isAllTab = tab === TAB_ALL;
       const isEntriesTab = tab === TAB_ENTRIES;
 
-      // Open todos first, then notes, then finished todos: the tab is a working
-      // view, so what still needs doing sits on top and the archive sinks.
-      const allRows = active.concat(noteItems, done);
+      // Notes first, then open todos, then finished todos. A note is reference
+      // material and is read before the work it explains; open work outranks the
+      // archive, so finished todos sink to the bottom of the tab.
+      const allRows = noteItems.concat(active, done);
       const inTab = isAllTab ? allRows : tab === TAB_DONE ? done : isEntriesTab ? noteItems : active;
 
       // Searching looks at todos, notes and completed todos at once, so the matching
