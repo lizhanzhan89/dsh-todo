@@ -409,7 +409,10 @@ function TodoPage(props) {
   const board = h('div', { className: 'tp-content' },
     h('header', { className: 'tp-head tp-head-row' },
       h('div', { className: 'tp-head-title' },
-        h('h1', null, t('title')),
+        // The build stamp is the quickest way to tell a stale browser cache from
+        // a real bug: if this number is not what the source says, the page is
+        // running old code and no CSS fix can show up yet.
+        h('h1', null, t('title'), h('span', { className: 'tp-build' }, 'v' + BUILD)),
         h('p', null, searching
           ? t('searchResults').replace('{query}', query.trim()).replace('{count}', String(matchCount))
           : t('subtitle'))),

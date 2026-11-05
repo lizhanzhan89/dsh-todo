@@ -37,3 +37,11 @@ const KIND_ENTRY = 'entry';
  * field: the editor is sized to the text, never taller than this.
  */
 const EDIT_ROWS = 3;
+
+/**
+ * Build stamp shown next to the panel title. Bump it on every shipped change:
+ * the panel is served as an immutable bundle picked by file metadata, so when
+ * a fix "does not apply" this number says whether the browser got the new code
+ * at all. It is a diagnostic, not a release number.
+ */
+const BUILD = '2026-11-05.3';
