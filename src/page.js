@@ -179,7 +179,10 @@ function TodoPage(props) {
   };
 
   // --- reordering -----------------------------------------------------------
-  const reorderItems = (sourceId, targetId) => update((prev) => reorderItem(prev, sourceId, targetId));
+  // `mixed` says whether the source row came from the combined "All" tab, where
+  // a note and a todo are allowed to swap places.
+  const reorderItems = (sourceId, targetId, mixed) =>
+    update((prev) => reorderItem(prev, sourceId, targetId, mixed));
   const reorderProjects = (sourceId, targetId) => update((prev) => reorderProject(prev, sourceId, targetId));
 
   // --- export / import ------------------------------------------------------
@@ -288,8 +291,49 @@ function TodoPage(props) {
       + state.projects.filter((project) => matches(project.name)).length;
 
   // --- drag handlers shared by todo and note rows ---------------------------
+  // Only the grip starts a drag: the <li> itself is not draggable, so text
+  // selection and the row's buttons never turn into a drag. `gripDragProps`
+  // returns the handlers for the grip, `itemDragProps` the drop target events
+  // that stay on the row.
+  const [dragArmedId, setDragArmedId] = React.useState(null);
+
+  /**
+   * Whether the row was dragged out of the combined "All" tab. There a note and
+   * a todo are neighbours in one column, so the two kinds may be interleaved;
+   * in the single-kind tabs the kind is fixed and the check stays strict.
+   */
+  const draggingFromAll = () =>
+    tabFor(projectIdOf(state.todos.find((candidate) => candidate.id === itemDragId) || {})) === TAB_ALL;
+
   const itemDragProps = (item) => ({
-    draggable: true,
+    onDragOver: (event) => {
+      if (!itemDragId || itemDragId === item.id) return;
+      const source = state.todos.find((candidate) => candidate.id === itemDragId);
+      if (source === undefined) return;
+      const allowed = draggingFromAll() ? sameGroup : sameList;
+      if (!allowed(source, item)) return;
+      event.preventDefault();
+      try { event.dataTransfer.dropEffect = 'move'; } catch (e) { /* ignore */ }
+      if (itemDropId !== item.id) setItemDropId(item.id);
+    },
+    onDragLeave: () => { if (itemDropId === item.id) setItemDropId(null); },
+    onDrop: (event) => {
+      event.preventDefault();
+      reorderItems(itemDragId, item.id, draggingFromAll());
+      setItemDragId(null);
+      setItemDropId(null);
+      setDragArmedId(null);
+    },
+  });
+
+  /**
+   * The grip is the only draggable element of a row. `dragArmedId` mirrors the
+   * grip's own `draggable` flag: React keeps a DOM attribute once set, so the
+   * flag has to be reset on drag end or the row stays draggable afterwards.
+   */
+  const gripDragProps = (item) => ({
+    draggable: dragArmedId === item.id || undefined,
+    onMouseDown: () => setDragArmedId(item.id),
     onDragStart: (event) => {
       setItemDragId(item.id);
       setItemDropId(null);
@@ -298,22 +342,11 @@ function TodoPage(props) {
         event.dataTransfer.setData('text/plain', item.id);
       } catch (e) { /* some browsers restrict dataTransfer */ }
     },
-    onDragOver: (event) => {
-      if (!itemDragId || itemDragId === item.id) return;
-      const source = state.todos.find((candidate) => candidate.id === itemDragId);
-      if (source === undefined || !sameList(source, item)) return;
-      event.preventDefault();
-      try { event.dataTransfer.dropEffect = 'move'; } catch (e) { /* ignore */ }
-      if (itemDropId !== item.id) setItemDropId(item.id);
-    },
-    onDragLeave: () => { if (itemDropId === item.id) setItemDropId(null); },
-    onDrop: (event) => {
-      event.preventDefault();
-      reorderItems(itemDragId, item.id);
+    onDragEnd: () => {
       setItemDragId(null);
       setItemDropId(null);
+      setDragArmedId(null);
     },
-    onDragEnd: () => { setItemDragId(null); setItemDropId(null); },
   });
 
   const itemDragClass = (item) =>
@@ -336,7 +369,7 @@ function TodoPage(props) {
     deleteForever: deleteForeverRecord, emptyTrash: emptyAll,
     toggleTodo: (id) => update((prev) => toggleTodo(prev, id)),
     startEdit, cancelEdit, commitEdit,
-    itemDragProps, itemDragClass,
+    itemDragProps, itemDragClass, gripDragProps,
     addProject,
     exporting, exportData, importing, importFile, syncing, syncNow,
   };

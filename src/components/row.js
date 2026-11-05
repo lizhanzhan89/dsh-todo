@@ -50,14 +50,29 @@ function editableText(item, api) {
   }, item.text);
 }
 
-/** A plain note: no checkbox, just a grip, text, edit and delete. */
-function renderEntry(item, api) {
+/**
+ * The drag grip. It is the only draggable element of a row, so the text can be
+ * selected and the buttons clicked without starting a drag.
+ */
+function renderGrip(item, api) {
+  return h('span', {
+    className: 'tp-row-grip',
+    title: api.t('dragToReorder'),
+    'aria-hidden': true,
+    ...api.gripDragProps(item),
+  }, '⠿');
+}
+
+/** A plain note: a kind badge, no checkbox, a grip, text, edit and delete. */
+function renderEntry(item, api, options) {
+  const withKind = !!(options && options.withKind);
   return h('li', {
     key: item.id,
-    className: 'tp-todo tp-entry is-draggable' + api.itemDragClass(item),
+    className: 'tp-todo tp-entry' + (withKind ? ' has-kind' : '') + api.itemDragClass(item),
     ...api.itemDragProps(item),
   },
-    h('span', { className: 'tp-row-grip', 'aria-hidden': true }, '⠿'),
+    renderGrip(item, api),
+    withKind ? h(KindBadge, { kind: KIND_ENTRY, label: api.t('kindNote'), size: 14 }) : null,
     h('div', { className: 'tp-todo-main' },
       editableText(item, api)),
     h('button', {
@@ -76,15 +91,17 @@ function renderEntry(item, api) {
     }, h(TrashIcon, { size: 14 })));
 }
 
-/** A todo: checkbox, text, finish time when done, edit (if allowed) and delete. */
-function renderTodo(todo, api) {
+/** A todo: a kind badge, checkbox, text, finish time when done, edit and delete. */
+function renderTodo(todo, api, options) {
   const { t } = api;
+  const withKind = !!(options && options.withKind);
   return h('li', {
     key: todo.id,
-    className: 'tp-todo is-draggable' + (todo.done ? ' is-done' : '') + api.itemDragClass(todo),
+    className: 'tp-todo is-todo' + (withKind ? ' has-kind' : '') + (todo.done ? ' is-done' : '') + api.itemDragClass(todo),
     ...api.itemDragProps(todo),
   },
-    h('span', { className: 'tp-row-grip', 'aria-hidden': true }, '⠿'),
+    renderGrip(todo, api),
+    withKind ? h(KindBadge, { kind: KIND_TODO, label: t('kindTodo'), size: 14 }) : null,
     h('button', {
       type: 'button',
       className: 'tp-check' + (todo.done ? ' is-done' : ''),
@@ -113,7 +130,13 @@ function renderTodo(todo, api) {
     }, h(TrashIcon, { size: 14 })));
 }
 
-/** Dispatch one item to the matching row renderer. */
-function renderRow(item, api) {
-  return isEntry(item) ? renderEntry(item, api) : renderTodo(item, api);
+/**
+ * Dispatch one item to the matching row renderer.
+ *
+ * `options.withKind` adds the leading todo/note badge. Only the combined "All"
+ * tab sets it, because that tab mixes both kinds and the badge is what tells
+ * them apart; the single-kind tabs leave it off.
+ */
+function renderRow(item, api, options) {
+  return isEntry(item) ? renderEntry(item, api, options) : renderTodo(item, api, options);
 }

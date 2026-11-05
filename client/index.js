@@ -37,7 +37,11 @@ window.__ModuleLoader__.load({
     /** Stable key for the fixed "Default" group (no project). */
     const NO_PROJECT = '__none__';
 
-    /** The three per-group tabs. */
+    /**
+     * The four per-group tabs. `TAB_ALL` mixes open todos, completed todos and
+     * notes, and is the only tab whose rows carry a kind badge.
+     */
+    const TAB_ALL = 'all';
     const TAB_ACTIVE = 'active';
     const TAB_DONE = 'done';
     const TAB_ENTRIES = 'entries';
@@ -81,9 +85,14 @@ window.__ModuleLoader__.load({
       deleteProject: 'Delete project',
       deleteProjectConfirm: 'Delete "{name}" and its todos?',
       countTodos: '{count} todos',
+      tabAll: 'All',
       tabActive: 'Active',
       tabDone: 'Completed',
       tabEntries: 'Notes',
+      kindTodo: 'Todo',
+      kindNote: 'Note',
+      allEmpty: 'This group is still empty',
+      allEmptyHint: 'Todos and notes both show up here.',
       entriesEmpty: 'No notes yet',
       entriesEmptyHint: 'Notes added here stay as plain text, shown without a checkbox.',
       addNotePlaceholder: 'Add a note and press Enter',
@@ -165,9 +174,14 @@ window.__ModuleLoader__.load({
       deleteProject: '删除项目',
       deleteProjectConfirm: '删除“{name}”及其全部待办？',
       countTodos: '{count} 项待办',
+      tabAll: '全部',
       tabActive: '未完成',
       tabDone: '已完成',
       tabEntries: '笔记',
+      kindTodo: '待办',
+      kindNote: '笔记',
+      allEmpty: '这一组还是空的',
+      allEmptyHint: '待办和笔记都会显示在这里。',
       entriesEmpty: '还没有笔记',
       entriesEmptyHint: '在这里添加的笔记是普通文字，不显示复选框。',
       addNotePlaceholder: '添加笔记，回车确认',
@@ -586,12 +600,19 @@ window.__ModuleLoader__.load({
     .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
     .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
     .tp-todos{list-style:none;margin:0;padding:6px}
-    .tp-todo{display:flex;align-items:flex-start;gap:10px;padding:8px;border-radius:10px}
+    .tp-todo{display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 6px;border-radius:10px;border-left:2px solid transparent;transition:background .12s,border-color .12s}
     .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
+    /* Every row carries a left accent so it reads as one block rather than as loose
+       text: todos take the brand colour, notes a neutral one, done rows go green. */
+    .tp-todo.is-todo{border-left-color:var(--dsw-alias-brand-primary)}
+    .tp-todo.tp-entry{border-left-color:var(--dsw-alias-border-l1)}
+    .tp-todo.is-done{border-left-color:var(--dsw-alias-state-success-primary)}
     .tp-check{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l1);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#fff}
     .tp-check.is-done{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}
     .tp-check:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
     .tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px}
+    .tp-todo.is-todo .tp-todo-text{font-weight:500}
+    .tp-todo.tp-entry .tp-todo-text{font-size:13.5px}
     .tp-editable{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
     .tp-editable:hover{background:var(--dsw-alias-bg-base);box-shadow:0 0 0 1px var(--dsw-alias-border-l1)}
     .tp-edit-input{height:28px;font-size:14px;padding:0 8px;margin:-3px 0}
@@ -606,20 +627,28 @@ window.__ModuleLoader__.load({
     .tp-empty strong{display:block;margin-bottom:4px;color:var(--dsw-alias-label-primary);font-weight:500}
     .tp-muted{color:var(--dsw-alias-label-secondary)}
     .tp-tabs{display:flex;align-items:center;gap:4px;padding:0}
-    .tp-tab{height:28px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer;padding:0 10px;border-radius:14px;display:inline-flex;align-items:center;gap:6px}
+    .tp-tab{height:28px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer;padding:0 8px;border-radius:14px;display:inline-flex;align-items:center;gap:5px}
+    .tp-tab svg{flex:none;opacity:.85}
+    .tp-tab.is-active svg{opacity:1}
     .tp-tab:hover{background:var(--dsw-alias-bg-layer-2)}
     .tp-tab.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
     .tp-tab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
     .tp-tab-count{color:var(--dsw-alias-label-secondary);font-size:12px;font-variant-numeric:tabular-nums}
     .tp-todo-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-    .tp-entry{padding-left:12px}
-    .tp-todo.is-draggable{cursor:grab}
-    .tp-todo.is-draggable:active{cursor:grabbing}
+    /* The grip is the only draggable element, so it always shows a grab cursor even
+       while invisible, which tells the mouse where a drag can start. */
+    .tp-row-grip{flex:none;width:12px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:22px;cursor:grab;opacity:0;transition:opacity .12s;text-align:center;user-select:none}
+    .tp-row-grip:active{cursor:grabbing}
+    .tp-todo:hover .tp-row-grip,.tp-todo.is-dragging .tp-row-grip{opacity:1}
     .tp-todo.is-dragging{opacity:.45}
     .tp-todo.is-drop-target{box-shadow:inset 0 2px 0 0 var(--dsw-alias-brand-primary)}
-    .tp-row-grip{flex:none;width:10px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:22px;opacity:0;transition:opacity .12s}
-    .tp-todo:hover .tp-row-grip,.tp-todo.is-dragging .tp-row-grip{opacity:1}
     .tp-todo-time{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:16px}
+    /* Kind badge: only the combined "All" tab shows one, because only there do
+       todos and notes share a column. */
+    .tp-kind{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-top:1px;border-radius:6px}
+    .tp-kind-todo{color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2)}
+    .tp-kind-note{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1)}
+    .tp-todos.is-mixed .tp-todo.has-kind{padding-left:4px;gap:8px}
     .tp-nav-trash{margin-top:6px;padding-top:9px;border-top:.5px solid var(--dsw-alias-border-l1);border-radius:0 0 8px 8px}
     .tp-nav-trash-icon{flex:none;display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary)}
     .tp-head-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -689,6 +718,49 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M4 7.5l2 2 3.5-4', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
         h('path', { d: 'M4 16.5l2 2 3.5-4', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', opacity: 0.55 }),
         h('path', { d: 'M12 8h8M12 17h8', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' }));
+    }
+
+    /* --- tab glyphs ---------------------------------------------------------- */
+
+    /** "Not done": an empty circle. */
+    function CircleIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('circle', { cx: 8, cy: 8, r: 5.2, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }));
+    }
+
+    /** "Done": a circle with a tick inside. */
+    function DoneCircleIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('circle', { cx: 8, cy: 8, r: 5.2, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }),
+        h('path', { d: 'M5.6 8.2l1.7 1.7 3.2-3.6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
+    /** "Notes": a page with a folded corner and two lines. */
+    function NoteIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('path', { d: 'M4 2.6h5l3 3v7.8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3.6a1 1 0 0 1 1-1z', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+        h('path', { d: 'M9 2.7v3h3', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+        h('path', { d: 'M5.6 9h4.8M5.6 11.3h3.2', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round' }));
+    }
+
+    /** "All": a stacked pair of lists. */
+    function StackIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('path', { d: 'M2.6 5.2h10.8M2.6 8h10.8M2.6 10.8h7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+    }
+
+    /**
+     * The leading badge that marks a row's kind in the combined "All" tab.
+     * The icon doubles as the tab glyph of that kind, so a row's badge and its tab
+     * look the same.
+     */
+    function KindBadge({ kind, label, size = 14 }) {
+      const Icon = kind === KIND_ENTRY ? NoteIcon : DoneCircleIcon;
+      return h('span', {
+        className: 'tp-kind tp-kind-' + (kind === KIND_ENTRY ? 'note' : 'todo'),
+        title: label,
+        'aria-label': label,
+      }, h(Icon, { size }));
     }
 
     /** Download arrow into a tray: "export". */
@@ -891,20 +963,28 @@ window.__ModuleLoader__.load({
       return { ...state, trash: [] };
     }
 
+    /** Whether two items belong to the same group, whatever their kind. */
+    const sameGroup = (a, b) => projectIdOf(a) === projectIdOf(b);
+
     /** Whether two items may sit in the same list: same group and same kind. */
-    const sameList = (a, b) =>
-      projectIdOf(a) === projectIdOf(b) && isEntry(a) === isEntry(b);
+    const sameList = (a, b) => sameGroup(a, b) && isEntry(a) === isEntry(b);
 
     /**
      * Drag-and-drop: take the dragged item's slot and insert it where the drop
      * target sat. Cross-list drops are ignored.
+     *
+     * `mixed` relaxes the kind check so a note can be dropped among todos: the
+     * combined "All" tab lists both kinds in one column, and there a note and a
+     * todo are neighbours. The group still has to match, so a row never moves to
+     * another project by accident.
      */
-    function reorderItem(state, sourceId, targetId) {
+    function reorderItem(state, sourceId, targetId, mixed) {
       if (!sourceId || !targetId || sourceId === targetId) return state;
       const from = state.todos.findIndex((item) => item.id === sourceId);
       const to = state.todos.findIndex((item) => item.id === targetId);
       if (from === -1 || to === -1) return state;
-      if (!sameList(state.todos[from], state.todos[to])) return state;
+      const allowed = mixed ? sameGroup : sameList;
+      if (!allowed(state.todos[from], state.todos[to])) return state;
       const next = state.todos.slice();
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
@@ -987,14 +1067,29 @@ window.__ModuleLoader__.load({
       }, item.text);
     }
 
-    /** A plain note: no checkbox, just a grip, text, edit and delete. */
-    function renderEntry(item, api) {
+    /**
+     * The drag grip. It is the only draggable element of a row, so the text can be
+     * selected and the buttons clicked without starting a drag.
+     */
+    function renderGrip(item, api) {
+      return h('span', {
+        className: 'tp-row-grip',
+        title: api.t('dragToReorder'),
+        'aria-hidden': true,
+        ...api.gripDragProps(item),
+      }, '⠿');
+    }
+
+    /** A plain note: a kind badge, no checkbox, a grip, text, edit and delete. */
+    function renderEntry(item, api, options) {
+      const withKind = !!(options && options.withKind);
       return h('li', {
         key: item.id,
-        className: 'tp-todo tp-entry is-draggable' + api.itemDragClass(item),
+        className: 'tp-todo tp-entry' + (withKind ? ' has-kind' : '') + api.itemDragClass(item),
         ...api.itemDragProps(item),
       },
-        h('span', { className: 'tp-row-grip', 'aria-hidden': true }, '⠿'),
+        renderGrip(item, api),
+        withKind ? h(KindBadge, { kind: KIND_ENTRY, label: api.t('kindNote'), size: 14 }) : null,
         h('div', { className: 'tp-todo-main' },
           editableText(item, api)),
         h('button', {
@@ -1013,15 +1108,17 @@ window.__ModuleLoader__.load({
         }, h(TrashIcon, { size: 14 })));
     }
 
-    /** A todo: checkbox, text, finish time when done, edit (if allowed) and delete. */
-    function renderTodo(todo, api) {
+    /** A todo: a kind badge, checkbox, text, finish time when done, edit and delete. */
+    function renderTodo(todo, api, options) {
       const { t } = api;
+      const withKind = !!(options && options.withKind);
       return h('li', {
         key: todo.id,
-        className: 'tp-todo is-draggable' + (todo.done ? ' is-done' : '') + api.itemDragClass(todo),
+        className: 'tp-todo is-todo' + (withKind ? ' has-kind' : '') + (todo.done ? ' is-done' : '') + api.itemDragClass(todo),
         ...api.itemDragProps(todo),
       },
-        h('span', { className: 'tp-row-grip', 'aria-hidden': true }, '⠿'),
+        renderGrip(todo, api),
+        withKind ? h(KindBadge, { kind: KIND_TODO, label: t('kindTodo'), size: 14 }) : null,
         h('button', {
           type: 'button',
           className: 'tp-check' + (todo.done ? ' is-done' : ''),
@@ -1050,22 +1147,40 @@ window.__ModuleLoader__.load({
         }, h(TrashIcon, { size: 14 })));
     }
 
-    /** Dispatch one item to the matching row renderer. */
-    function renderRow(item, api) {
-      return isEntry(item) ? renderEntry(item, api) : renderTodo(item, api);
+    /**
+     * Dispatch one item to the matching row renderer.
+     *
+     * `options.withKind` adds the leading todo/note badge. Only the combined "All"
+     * tab sets it, because that tab mixes both kinds and the badge is what tells
+     * them apart; the single-kind tabs leave it off.
+     */
+    function renderRow(item, api, options) {
+      return isEntry(item) ? renderEntry(item, api, options) : renderTodo(item, api, options);
     }
 
     /* ---------------------------------------------------------------------- */
     /* src/components/group.js                                                */
     /* ---------------------------------------------------------------------- */
     /**
-     * One project group on the board: a single header row with the three tabs on the
+     * One project group on the board: a single header row with the four tabs on the
      * left, the project name centred, and the add controls on the right, followed by
      * the rows of the selected tab.
      *
+     * The tabs are "All", "Open", "Done" and "Notes". "All" mixes every kind in one
+     * column and is the only tab that labels each row with a kind badge, because
+     * there the badge is the only thing telling a note from a todo.
+     *
      * While a search is active the group keeps its header and lists only the rows
-     * that match, across all three tabs at once.
+     * that match, across every tab at once.
      */
+
+    /** The tab glyph for a tab key. */
+    function tabIcon(key) {
+      if (key === TAB_ALL) return StackIcon;
+      if (key === TAB_DONE) return DoneCircleIcon;
+      if (key === TAB_ENTRIES) return NoteIcon;
+      return CircleIcon;
+    }
 
     /**
      * @param {object} group { id, name } — id null for the fixed default group
@@ -1078,9 +1193,15 @@ window.__ModuleLoader__.load({
       const noteItems = all.filter(isEntry);
       const active = todoItems.filter((todo) => !todo.done);
       const done = todoItems.filter((todo) => todo.done);
+
       const tab = tabFor(group.id);
-      const inTab = tab === TAB_DONE ? done : tab === TAB_ENTRIES ? noteItems : active;
+      const isAllTab = tab === TAB_ALL;
       const isEntriesTab = tab === TAB_ENTRIES;
+
+      // Open todos first, then notes, then finished todos: the tab is a working
+      // view, so what still needs doing sits on top and the archive sinks.
+      const allRows = active.concat(noteItems, done);
+      const inTab = isAllTab ? allRows : tab === TAB_DONE ? done : isEntriesTab ? noteItems : active;
 
       // Searching looks at todos, notes and completed todos at once, so the matching
       // rows come from every tab and are listed under the group regardless of which
@@ -1097,29 +1218,41 @@ window.__ModuleLoader__.load({
       const hitCount = (predicate) => (api.searching ? hits.filter(predicate).length : null);
       const countFor = (key, stored) => {
         if (!api.searching) return stored;
+        if (key === TAB_ALL) return hits.length;
         if (key === TAB_ENTRIES) return hitCount(isEntry);
         if (key === TAB_DONE) return hitCount((item) => !isEntry(item) && item.done);
         return hitCount((item) => !isEntry(item) && !item.done);
       };
 
-      const tabButton = (key, label, count) => h('button', {
-        type: 'button',
-        className: 'tp-tab' + (tab === key ? ' is-active' : '') + (api.searching ? ' is-filtered' : ''),
-        role: 'tab',
-        'aria-selected': tab === key,
-        onClick: () => setTabFor(group.id, key),
-      }, label, h('span', { className: 'tp-tab-count' }, String(countFor(key, count))));
+      const tabButton = (key, label, count) => {
+        const Icon = tabIcon(key);
+        return h('button', {
+          type: 'button',
+          className: 'tp-tab' + (tab === key ? ' is-active' : '') + (api.searching ? ' is-filtered' : ''),
+          role: 'tab',
+          'aria-selected': tab === key,
+          title: label,
+          onClick: () => setTabFor(group.id, key),
+        },
+          h(Icon, { size: 13 }),
+          h('span', { className: 'tp-tab-label' }, label),
+          h('span', { className: 'tp-tab-count' }, String(countFor(key, count))));
+      };
 
-      const emptyTitle = tab === TAB_DONE
-        ? t('doneEmpty')
-        : tab === TAB_ENTRIES
-          ? t('entriesEmpty')
-          : (todoItems.length === 0 ? t('empty') : t('activeEmpty'));
-      const emptyHint = tab === TAB_DONE
-        ? t('doneEmptyHint')
-        : tab === TAB_ENTRIES
-          ? t('entriesEmptyHint')
-          : (todoItems.length === 0 ? t('emptyHint') : t('activeEmptyHint'));
+      const emptyTitle = isAllTab
+        ? t('allEmpty')
+        : tab === TAB_DONE
+          ? t('doneEmpty')
+          : isEntriesTab
+            ? t('entriesEmpty')
+            : (todoItems.length === 0 ? t('empty') : t('activeEmpty'));
+      const emptyHint = isAllTab
+        ? t('allEmptyHint')
+        : tab === TAB_DONE
+          ? t('doneEmptyHint')
+          : isEntriesTab
+            ? t('entriesEmptyHint')
+            : (todoItems.length === 0 ? t('emptyHint') : t('activeEmptyHint'));
       const emptyBlock = shown.length === 0 && !groupHit
         ? h('div', { className: 'tp-empty' }, h('strong', null, emptyTitle), emptyHint)
         : null;
@@ -1129,8 +1262,9 @@ window.__ModuleLoader__.load({
       const submit = () => (isEntriesTab ? addNote(group.id) : addTodo(group.id));
 
       // Add controls sit in the header's right column. The compact form keeps them
-      // from squeezing the centred title. The completed tab takes no input.
-      const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES)
+      // from squeezing the centred title. "All" takes an input too: it adds a todo,
+      // the default kind.
+      const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES || isAllTab)
         ? h('div', { className: 'tp-add-inline' },
             h('input', {
               className: 'tp-input',
@@ -1152,12 +1286,16 @@ window.__ModuleLoader__.load({
 
       if (api.searching && !groupHit && shown.length === 0) return null;
 
+      // Only the combined tab mixes kinds, so only there does a row need a badge.
+      const rowOptions = { withKind: isAllTab && !api.searching };
+
       return h('section', { key: groupKey(group.id), id: groupAnchor(group.id), className: 'tp-group' },
         // One header row, three columns: tabs on the left, the project name in the
         // middle, the add controls on the right (when the tab has them).
         h('div', { className: 'tp-group-head' + (shown.length === 0 ? ' is-empty' : '') },
           h('div', { className: 'tp-group-side tp-group-side-left' },
             h('div', { className: 'tp-tabs', role: 'tablist' },
+              tabButton(TAB_ALL, t('tabAll'), allRows.length),
               tabButton(TAB_ACTIVE, t('tabActive'), active.length),
               tabButton(TAB_DONE, t('tabDone'), done.length),
               tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
@@ -1165,7 +1303,8 @@ window.__ModuleLoader__.load({
             h('h2', { className: 'tp-group-title' }, group.name)),
           h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
         h('div', { className: 'tp-group-body' },
-          h('ul', { className: 'tp-todos' }, shown.map((item) => renderRow(item, api))),
+          h('ul', { className: 'tp-todos' + (isAllTab ? ' is-mixed' : '') },
+            shown.map((item) => renderRow(item, api, rowOptions))),
           emptyBlock));
     }
 
@@ -1686,7 +1825,10 @@ window.__ModuleLoader__.load({
       };
 
       // --- reordering -----------------------------------------------------------
-      const reorderItems = (sourceId, targetId) => update((prev) => reorderItem(prev, sourceId, targetId));
+      // `mixed` says whether the source row came from the combined "All" tab, where
+      // a note and a todo are allowed to swap places.
+      const reorderItems = (sourceId, targetId, mixed) =>
+        update((prev) => reorderItem(prev, sourceId, targetId, mixed));
       const reorderProjects = (sourceId, targetId) => update((prev) => reorderProject(prev, sourceId, targetId));
 
       // --- export / import ------------------------------------------------------
@@ -1795,8 +1937,49 @@ window.__ModuleLoader__.load({
           + state.projects.filter((project) => matches(project.name)).length;
 
       // --- drag handlers shared by todo and note rows ---------------------------
+      // Only the grip starts a drag: the <li> itself is not draggable, so text
+      // selection and the row's buttons never turn into a drag. `gripDragProps`
+      // returns the handlers for the grip, `itemDragProps` the drop target events
+      // that stay on the row.
+      const [dragArmedId, setDragArmedId] = React.useState(null);
+
+      /**
+       * Whether the row was dragged out of the combined "All" tab. There a note and
+       * a todo are neighbours in one column, so the two kinds may be interleaved;
+       * in the single-kind tabs the kind is fixed and the check stays strict.
+       */
+      const draggingFromAll = () =>
+        tabFor(projectIdOf(state.todos.find((candidate) => candidate.id === itemDragId) || {})) === TAB_ALL;
+
       const itemDragProps = (item) => ({
-        draggable: true,
+        onDragOver: (event) => {
+          if (!itemDragId || itemDragId === item.id) return;
+          const source = state.todos.find((candidate) => candidate.id === itemDragId);
+          if (source === undefined) return;
+          const allowed = draggingFromAll() ? sameGroup : sameList;
+          if (!allowed(source, item)) return;
+          event.preventDefault();
+          try { event.dataTransfer.dropEffect = 'move'; } catch (e) { /* ignore */ }
+          if (itemDropId !== item.id) setItemDropId(item.id);
+        },
+        onDragLeave: () => { if (itemDropId === item.id) setItemDropId(null); },
+        onDrop: (event) => {
+          event.preventDefault();
+          reorderItems(itemDragId, item.id, draggingFromAll());
+          setItemDragId(null);
+          setItemDropId(null);
+          setDragArmedId(null);
+        },
+      });
+
+      /**
+       * The grip is the only draggable element of a row. `dragArmedId` mirrors the
+       * grip's own `draggable` flag: React keeps a DOM attribute once set, so the
+       * flag has to be reset on drag end or the row stays draggable afterwards.
+       */
+      const gripDragProps = (item) => ({
+        draggable: dragArmedId === item.id || undefined,
+        onMouseDown: () => setDragArmedId(item.id),
         onDragStart: (event) => {
           setItemDragId(item.id);
           setItemDropId(null);
@@ -1805,22 +1988,11 @@ window.__ModuleLoader__.load({
             event.dataTransfer.setData('text/plain', item.id);
           } catch (e) { /* some browsers restrict dataTransfer */ }
         },
-        onDragOver: (event) => {
-          if (!itemDragId || itemDragId === item.id) return;
-          const source = state.todos.find((candidate) => candidate.id === itemDragId);
-          if (source === undefined || !sameList(source, item)) return;
-          event.preventDefault();
-          try { event.dataTransfer.dropEffect = 'move'; } catch (e) { /* ignore */ }
-          if (itemDropId !== item.id) setItemDropId(item.id);
-        },
-        onDragLeave: () => { if (itemDropId === item.id) setItemDropId(null); },
-        onDrop: (event) => {
-          event.preventDefault();
-          reorderItems(itemDragId, item.id);
+        onDragEnd: () => {
           setItemDragId(null);
           setItemDropId(null);
+          setDragArmedId(null);
         },
-        onDragEnd: () => { setItemDragId(null); setItemDropId(null); },
       });
 
       const itemDragClass = (item) =>
@@ -1843,7 +2015,7 @@ window.__ModuleLoader__.load({
         deleteForever: deleteForeverRecord, emptyTrash: emptyAll,
         toggleTodo: (id) => update((prev) => toggleTodo(prev, id)),
         startEdit, cancelEdit, commitEdit,
-        itemDragProps, itemDragClass,
+        itemDragProps, itemDragClass, gripDragProps,
         addProject,
         exporting, exportData, importing, importFile, syncing, syncNow,
       };

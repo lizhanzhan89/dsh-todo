@@ -1,11 +1,23 @@
 /**
- * One project group on the board: a single header row with the three tabs on the
+ * One project group on the board: a single header row with the four tabs on the
  * left, the project name centred, and the add controls on the right, followed by
  * the rows of the selected tab.
  *
+ * The tabs are "All", "Open", "Done" and "Notes". "All" mixes every kind in one
+ * column and is the only tab that labels each row with a kind badge, because
+ * there the badge is the only thing telling a note from a todo.
+ *
  * While a search is active the group keeps its header and lists only the rows
- * that match, across all three tabs at once.
+ * that match, across every tab at once.
  */
+
+/** The tab glyph for a tab key. */
+function tabIcon(key) {
+  if (key === TAB_ALL) return StackIcon;
+  if (key === TAB_DONE) return DoneCircleIcon;
+  if (key === TAB_ENTRIES) return NoteIcon;
+  return CircleIcon;
+}
 
 /**
  * @param {object} group { id, name } — id null for the fixed default group
@@ -18,9 +30,15 @@ function renderGroup(group, api) {
   const noteItems = all.filter(isEntry);
   const active = todoItems.filter((todo) => !todo.done);
   const done = todoItems.filter((todo) => todo.done);
+
   const tab = tabFor(group.id);
-  const inTab = tab === TAB_DONE ? done : tab === TAB_ENTRIES ? noteItems : active;
+  const isAllTab = tab === TAB_ALL;
   const isEntriesTab = tab === TAB_ENTRIES;
+
+  // Open todos first, then notes, then finished todos: the tab is a working
+  // view, so what still needs doing sits on top and the archive sinks.
+  const allRows = active.concat(noteItems, done);
+  const inTab = isAllTab ? allRows : tab === TAB_DONE ? done : isEntriesTab ? noteItems : active;
 
   // Searching looks at todos, notes and completed todos at once, so the matching
   // rows come from every tab and are listed under the group regardless of which
@@ -37,29 +55,41 @@ function renderGroup(group, api) {
   const hitCount = (predicate) => (api.searching ? hits.filter(predicate).length : null);
   const countFor = (key, stored) => {
     if (!api.searching) return stored;
+    if (key === TAB_ALL) return hits.length;
     if (key === TAB_ENTRIES) return hitCount(isEntry);
     if (key === TAB_DONE) return hitCount((item) => !isEntry(item) && item.done);
     return hitCount((item) => !isEntry(item) && !item.done);
   };
 
-  const tabButton = (key, label, count) => h('button', {
-    type: 'button',
-    className: 'tp-tab' + (tab === key ? ' is-active' : '') + (api.searching ? ' is-filtered' : ''),
-    role: 'tab',
-    'aria-selected': tab === key,
-    onClick: () => setTabFor(group.id, key),
-  }, label, h('span', { className: 'tp-tab-count' }, String(countFor(key, count))));
+  const tabButton = (key, label, count) => {
+    const Icon = tabIcon(key);
+    return h('button', {
+      type: 'button',
+      className: 'tp-tab' + (tab === key ? ' is-active' : '') + (api.searching ? ' is-filtered' : ''),
+      role: 'tab',
+      'aria-selected': tab === key,
+      title: label,
+      onClick: () => setTabFor(group.id, key),
+    },
+      h(Icon, { size: 13 }),
+      h('span', { className: 'tp-tab-label' }, label),
+      h('span', { className: 'tp-tab-count' }, String(countFor(key, count))));
+  };
 
-  const emptyTitle = tab === TAB_DONE
-    ? t('doneEmpty')
-    : tab === TAB_ENTRIES
-      ? t('entriesEmpty')
-      : (todoItems.length === 0 ? t('empty') : t('activeEmpty'));
-  const emptyHint = tab === TAB_DONE
-    ? t('doneEmptyHint')
-    : tab === TAB_ENTRIES
-      ? t('entriesEmptyHint')
-      : (todoItems.length === 0 ? t('emptyHint') : t('activeEmptyHint'));
+  const emptyTitle = isAllTab
+    ? t('allEmpty')
+    : tab === TAB_DONE
+      ? t('doneEmpty')
+      : isEntriesTab
+        ? t('entriesEmpty')
+        : (todoItems.length === 0 ? t('empty') : t('activeEmpty'));
+  const emptyHint = isAllTab
+    ? t('allEmptyHint')
+    : tab === TAB_DONE
+      ? t('doneEmptyHint')
+      : isEntriesTab
+        ? t('entriesEmptyHint')
+        : (todoItems.length === 0 ? t('emptyHint') : t('activeEmptyHint'));
   const emptyBlock = shown.length === 0 && !groupHit
     ? h('div', { className: 'tp-empty' }, h('strong', null, emptyTitle), emptyHint)
     : null;
@@ -69,8 +99,9 @@ function renderGroup(group, api) {
   const submit = () => (isEntriesTab ? addNote(group.id) : addTodo(group.id));
 
   // Add controls sit in the header's right column. The compact form keeps them
-  // from squeezing the centred title. The completed tab takes no input.
-  const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES)
+  // from squeezing the centred title. "All" takes an input too: it adds a todo,
+  // the default kind.
+  const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES || isAllTab)
     ? h('div', { className: 'tp-add-inline' },
         h('input', {
           className: 'tp-input',
@@ -92,12 +123,16 @@ function renderGroup(group, api) {
 
   if (api.searching && !groupHit && shown.length === 0) return null;
 
+  // Only the combined tab mixes kinds, so only there does a row need a badge.
+  const rowOptions = { withKind: isAllTab && !api.searching };
+
   return h('section', { key: groupKey(group.id), id: groupAnchor(group.id), className: 'tp-group' },
     // One header row, three columns: tabs on the left, the project name in the
     // middle, the add controls on the right (when the tab has them).
     h('div', { className: 'tp-group-head' + (shown.length === 0 ? ' is-empty' : '') },
       h('div', { className: 'tp-group-side tp-group-side-left' },
         h('div', { className: 'tp-tabs', role: 'tablist' },
+          tabButton(TAB_ALL, t('tabAll'), allRows.length),
           tabButton(TAB_ACTIVE, t('tabActive'), active.length),
           tabButton(TAB_DONE, t('tabDone'), done.length),
           tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
@@ -105,6 +140,7 @@ function renderGroup(group, api) {
         h('h2', { className: 'tp-group-title' }, group.name)),
       h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
     h('div', { className: 'tp-group-body' },
-      h('ul', { className: 'tp-todos' }, shown.map((item) => renderRow(item, api))),
+      h('ul', { className: 'tp-todos' + (isAllTab ? ' is-mixed' : '') },
+        shown.map((item) => renderRow(item, api, rowOptions))),
       emptyBlock));
 }
