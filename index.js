@@ -3,7 +3,7 @@
  *
  * Owns the JSON data file and exposes it over one authenticated HTTP route that
  * the Client half talks to:
- *   GET  /api/dsh-todo  -> the stored state JSON ({ projects, todos, trash })
+ *   GET  /api/dsh-todo  -> the stored state JSON
  *   POST /api/dsh-todo  -> replace the stored state with the request body
  *
  * Every Client change POSTs the full state, so the JSON file on disk is always
@@ -19,6 +19,30 @@ export const inject = ['webServer', 'connection'];
 const ROUTE_PATH = '/api/dsh-todo';
 const DEFAULT_FILE_NAME = 'dsh-todo.json';
 
+/**
+ * Keep the record fields the Client persists.
+ *
+ * This list is the one place the file's shape is decided. Building the object
+ * field by field here (rather than spreading the body through) is what caused a
+ * real bug: `includeDone` was added to the Client's state, the Client POSTed
+ * it, and this whitelist dropped it on the floor, so the setting came back
+ * defaulted after every reload. A whitelist is still the right thing - the file
+ * must not absorb arbitrary request fields - so it now names every field.
+ *
+ * @param {object} state whatever the Client sent
+ * @returns {object} the subset that belongs in the file
+ */
+function pickState(state) {
+  const picked = {
+    projects: Array.isArray(state && state.projects) ? state.projects : [],
+    todos: Array.isArray(state && state.todos) ? state.todos : [],
+    trash: Array.isArray(state && state.trash) ? state.trash : [],
+  };
+  // A boolean preference, missing from files written by older versions.
+  if (state && typeof state.includeDone === 'boolean') picked.includeDone = state.includeDone;
+  return picked;
+}
+
 export function apply(ctx, config = {}) {
   const workingDirectory = ctx.get('workingDirectory');
   const baseDir =
@@ -33,12 +57,9 @@ export function apply(ctx, config = {}) {
   async function readState() {
     try {
       const text = await readFile(dataFile, 'utf8');
-      const parsed = JSON.parse(text);
-      return {
-        projects: Array.isArray(parsed.projects) ? parsed.projects : [],
-        todos: Array.isArray(parsed.todos) ? parsed.todos : [],
-        trash: Array.isArray(parsed.trash) ? parsed.trash : [],
-      };
+      // Same shape as a write, so a field never survives a write but vanish on
+      // the way back in.
+      return pickState(JSON.parse(text));
     } catch (error) {
       if (error && error.code === 'ENOENT') return { projects: [], todos: [], trash: [] };
       ctx.logger.warn('dsh-todo: failed to read data file', error);
@@ -47,11 +68,7 @@ export function apply(ctx, config = {}) {
   }
 
   async function writeState(state) {
-    const safe = {
-      projects: Array.isArray(state && state.projects) ? state.projects : [],
-      todos: Array.isArray(state && state.todos) ? state.todos : [],
-      trash: Array.isArray(state && state.trash) ? state.trash : [],
-    };
+    const safe = pickState(state);
     await mkdir(dirname(dataFile), { recursive: true });
     const tmp = dataFile + '.' + process.pid + '.tmp';
     // Write-then-rename so a reader never sees a half-written file.
