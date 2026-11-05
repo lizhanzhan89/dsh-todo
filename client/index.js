@@ -58,6 +58,14 @@ window.__ModuleLoader__.load({
      */
     const EDIT_ROWS = 3;
 
+    /**
+     * Build stamp shown next to the panel title. Bump it on every shipped change:
+     * the panel is served as an immutable bundle picked by file metadata, so when
+     * a fix "does not apply" this number says whether the browser got the new code
+     * at all. It is a diagnostic, not a release number.
+     */
+    const BUILD = '2026-11-05.3';
+
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
     /* ---------------------------------------------------------------------- */
@@ -595,7 +603,9 @@ window.__ModuleLoader__.load({
     .tp-scroll{scrollbar-gutter:stable;flex:1;min-height:0;overflow:auto}
     .tp-content{max-width:820px;margin:0 auto;padding:0 clamp(20px,4vw,44px) 48px}
     .tp-head{margin-bottom:20px;padding-top:28px}
-    .tp-head h1{margin:0;font-size:20px;font-weight:500;line-height:28px}
+    .tp-head h1{margin:0;font-size:20px;font-weight:500;line-height:28px;display:flex;align-items:baseline;gap:8px}
+    /* The build stamp: small, quiet, and only there to identify the loaded code. */
+    .tp-build{font-size:11px;font-weight:400;line-height:16px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}
     .tp-head p{margin:4px 0 0;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:20px}
     .tp-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:20px}
     .tp-btn{border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);border-radius:10px;height:32px;padding:0 12px;font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,border-color .15s}
@@ -2214,7 +2224,10 @@ window.__ModuleLoader__.load({
       const board = h('div', { className: 'tp-content' },
         h('header', { className: 'tp-head tp-head-row' },
           h('div', { className: 'tp-head-title' },
-            h('h1', null, t('title')),
+            // The build stamp is the quickest way to tell a stale browser cache from
+            // a real bug: if this number is not what the source says, the page is
+            // running old code and no CSS fix can show up yet.
+            h('h1', null, t('title'), h('span', { className: 'tp-build' }, 'v' + BUILD)),
             h('p', null, searching
               ? t('searchResults').replace('{query}', query.trim()).replace('{count}', String(matchCount))
               : t('subtitle'))),
