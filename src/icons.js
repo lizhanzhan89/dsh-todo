@@ -83,9 +83,9 @@ function StackIcon({ size = 13 }) {
 }
 
 /**
- * The leading badge that marks a row's kind in the combined "All" tab.
- * The icon doubles as the tab glyph of that kind, so a row's badge and its tab
- * look the same.
+ * The leading badge that marks a row's kind in the combined "All" tab. The icon
+ * doubles as the tab glyph of that kind, so a row's badge and its tab look the
+ * same.
  */
 function KindBadge({ kind, label, size = 14 }) {
   // A todo takes the empty checkbox rather than the ticked one: a badge says

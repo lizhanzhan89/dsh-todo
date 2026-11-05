@@ -81,27 +81,24 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-icon-btn{flex:none;width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
 .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
-.tp-todos{list-style:none;margin:0;padding:6px}
+.tp-todos{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:4px}
 .tp-todo{position:relative;display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 12px;border-radius:10px;transition:background .12s}
+/* Hover deepens the wash slightly instead of swapping in a token colour, which
+   would replace the kind's tint with a neutral one on every mouse-over. */
 .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
-/* The accent bar is a pseudo-element inset from the row's own top and bottom,
-   not a left border: a border runs the full height, so stacked rows joined into
-   one unbroken line. Insetting it keeps neighbouring bars visibly separate. */
-.tp-todo::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:1px;background:transparent;transition:background .12s}
-.tp-todo.is-todo::before{background:var(--dsw-alias-brand-primary)}
-.tp-todo.tp-entry::before{background:var(--dsw-alias-border-l1)}
-.tp-todo.is-done::before{background:var(--dsw-alias-state-success-primary)}
 .tp-check{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l1);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#fff}
 .tp-check.is-done{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}
 .tp-check:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
 /* pre-wrap keeps the newlines a user typed and still wraps long lines. */
 .tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px;white-space:pre-wrap}
 .tp-todo.is-todo .tp-todo-text{font-weight:500}
-.tp-todo.tp-entry .tp-todo-text{font-size:13.5px}
+.tp-todo.tp-entry .tp-todo-text{font-size:13.5px;color:var(--dsw-alias-label-secondary)}
 .tp-editable{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
 .tp-editable:hover{background:var(--dsw-alias-bg-base);box-shadow:0 0 0 1px var(--dsw-alias-border-l1)}
-/* The inline editor grows with its text instead of staying one line high. */
-.tp-edit-input{min-height:28px;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow:hidden;font-family:inherit}
+/* The inline editor is three text rows tall whatever the text length: it shows
+   a multi-line item without a scrollbar, and scrolls past that instead of
+   pushing the rest of the list down while typing. */
+.tp-edit-input{height:auto;min-height:68px;max-height:68px;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow-y:auto;font-family:inherit}
 .tp-edit-btn{opacity:0;transition:opacity .12s}
 .tp-todo:hover .tp-edit-btn,.tp-edit-btn:focus-visible{opacity:1}
 .tp-todo.is-done .tp-todo-text{color:var(--dsw-alias-label-secondary);text-decoration:line-through}
@@ -115,12 +112,12 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-empty{padding:26px 16px;text-align:center;color:var(--dsw-alias-label-secondary);font-size:13px}
 .tp-empty strong{display:block;margin-bottom:4px;color:var(--dsw-alias-label-primary);font-weight:500}
 .tp-muted{color:var(--dsw-alias-label-secondary)}
-.tp-tabs{display:flex;align-items:center;gap:4px;padding:0}
-.tp-tab{height:28px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer;padding:0 8px;border-radius:14px;display:inline-flex;align-items:center;gap:5px}
+.tp-tabs{display:flex;align-items:center;gap:4px;padding:0;min-width:0;flex-wrap:wrap}
+.tp-tab{height:28px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer;padding:0 8px;border-radius:14px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .tp-tab svg{flex:none;opacity:.85}
 .tp-tab.is-active svg{opacity:1}
 .tp-tab:hover{background:var(--dsw-alias-bg-layer-2)}
-.tp-tab.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.tp-tab.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-weight:500}
 .tp-tab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
 .tp-tab-count{color:var(--dsw-alias-label-secondary);font-size:12px;font-variant-numeric:tabular-nums}
 .tp-todo-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}

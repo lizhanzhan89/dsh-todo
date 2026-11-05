@@ -160,8 +160,7 @@ function reorderItem(state, sourceId, targetId, mixed) {
   const from = state.todos.findIndex((item) => item.id === sourceId);
   const to = state.todos.findIndex((item) => item.id === targetId);
   if (from === -1 || to === -1) return state;
-  const allowed = mixed ? sameGroup : sameList;
-  if (!allowed(state.todos[from], state.todos[to])) return state;
+  if (!(mixed ? sameGroup : sameList)(state.todos[from], state.todos[to])) return state;
   const next = state.todos.slice();
   const [moved] = next.splice(from, 1);
   next.splice(to, 0, moved);

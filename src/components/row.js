@@ -12,8 +12,31 @@
 const canEdit = (item) => !item.done;
 
 /**
- * Row text. While that row is being edited it becomes an input; otherwise it is
- * a span that opens the editor on double-click, or a locked span when read-only.
+ * The text of a collapsed row.
+ *
+ * `pre-wrap` keeps every newline, but an unbounded item would push one row to
+ * the height of the whole note. Lines are cut on their own rather than with a
+ * CSS line clamp, which would also cut the line horizontally: a long line is
+ * sliced at COLLAPSED_CHARS, and past COLLAPSED_LINES lines the last shown line
+ * ends in an ellipsis. The full text stays in `item.text`, in the editor and in
+ * the tooltip.
+ */
+function collapsedText(text) {
+  const lines = String(text == null ? '' : text).split('\n');
+  const shown = lines.slice(0, COLLAPSED_LINES).map((line) =>
+    (line.length > COLLAPSED_CHARS ? line.slice(0, COLLAPSED_CHARS) + '…' : line));
+  if (lines.length > COLLAPSED_LINES) shown[shown.length - 1] += '…';
+  return shown.join('\n');
+}
+
+/**
+ * The text of a row: an editor while that row is being edited, otherwise a span
+ * that opens the editor on double-click, or a locked span when read-only.
+ *
+ * The editor is a textarea fixed at three text rows: an item may span many
+ * lines, and a one-row field would show only the first one, while growing
+ * without a cap would shove the rest of the list around. Past three lines it
+ * scrolls, so the row keeps a predictable height.
  *
  * @param {object} item the todo or note
  * @param {object} api  { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t }
@@ -21,11 +44,10 @@ const canEdit = (item) => !item.done;
 function editableText(item, api) {
   const { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t } = api;
   if (editingId === item.id && canEdit(item)) {
-    // A textarea, not an input: a todo or note may span several lines. Enter
-    // inserts a newline and Ctrl/Cmd+Enter saves, matching the add field.
+    // Enter inserts a newline and Ctrl/Cmd+Enter saves, matching the add field.
     return h('textarea', {
       className: 'tp-input tp-edit-input',
-      rows: 1,
+      rows: EDIT_ROWS,
       autoFocus: true,
       value: editDraft,
       onChange: (event) => setEditDraft(event.target.value),
@@ -46,13 +68,13 @@ function editableText(item, api) {
     return h('span', {
       className: 'tp-todo-text tp-locked',
       title: t('editLocked'),
-    }, item.text);
+    }, collapsedText(item.text));
   }
   return h('span', {
     className: 'tp-todo-text tp-editable',
-    title: t('editHint'),
+    title: item.text,
     onDoubleClick: () => startEdit(item),
-  }, item.text);
+  }, collapsedText(item.text));
 }
 
 /**

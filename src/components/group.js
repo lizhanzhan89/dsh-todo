@@ -35,9 +35,10 @@ function renderGroup(group, api) {
   const isAllTab = tab === TAB_ALL;
   const isEntriesTab = tab === TAB_ENTRIES;
 
-  // Open todos first, then notes, then finished todos: the tab is a working
-  // view, so what still needs doing sits on top and the archive sinks.
-  const allRows = active.concat(noteItems, done);
+  // Notes first, then open todos, then finished todos. A note is reference
+  // material and is read before the work it explains; open work outranks the
+  // archive, so finished todos sink to the bottom of the tab.
+  const allRows = noteItems.concat(active, done);
   const inTab = isAllTab ? allRows : tab === TAB_DONE ? done : isEntriesTab ? noteItems : active;
 
   // Searching looks at todos, notes and completed todos at once, so the matching
