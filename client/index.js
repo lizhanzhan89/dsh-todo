@@ -64,7 +64,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-05.4';
+    const BUILD = '2026-11-05.5';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -591,12 +591,14 @@ window.__ModuleLoader__.load({
     .tp-nav-new{width:100%;justify-content:center}
     .tp-nav-create{display:flex;flex-direction:column;gap:6px}
     /* Taller than the plain input: this field is a one-off action, and at 32px it
-       read as an inline chip next to the buttons under it. */
-    /* One rule only. An earlier attempt kept a second copy that the base .tp-input
+       read as an inline chip next to the buttons under it.
+       One rule only. An earlier attempt kept a second copy that the base .tp-input
        rule overrode at equal specificity, which is what made the height look
        ignored. The element selector raises specificity so there is no tie left to
-       lose. */
-    .tp-nav-create input.tp-input{height:44px;font-size:14px;padding:0 12px;border-radius:10px}
+       lose. min-height and line-height are repeated on purpose: an input's used
+       height is driven by the line box, so a rule that only set height would still
+       look unchanged whenever something else overrode it. */
+    .tp-nav-create input.tp-input{height:52px;min-height:52px;line-height:20px;font-size:15px;padding:0 14px;border-radius:12px}
     .tp-nav-create-actions{display:flex;gap:6px}
     .tp-nav-create-actions .tp-btn{flex:1;justify-content:center;height:30px;padding:0 8px}
     .tp-pane{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}
