@@ -582,7 +582,9 @@ window.__ModuleLoader__.load({
     label.tp-nav-data-btn{cursor:pointer}
     .tp-nav-new{width:100%;justify-content:center}
     .tp-nav-create{display:flex;flex-direction:column;gap:6px}
-    .tp-nav-create .tp-input{height:32px;font-size:13px}
+    /* Taller than the plain input: this field is a one-off action, and at 32px it
+       read as an inline chip next to the buttons under it. */
+    .tp-nav-create .tp-input{height:38px;font-size:13.5px;padding:0 12px}
     .tp-nav-create-actions{display:flex;gap:6px}
     .tp-nav-create-actions .tp-btn{flex:1;justify-content:center;height:30px;padding:0 8px}
     .tp-pane{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}
@@ -656,6 +658,10 @@ window.__ModuleLoader__.load({
     .tp-locked{cursor:default}
     .tp-add-inline{display:flex;align-items:flex-end;gap:6px;min-width:0;max-width:100%}
     .tp-add-inline .tp-input{height:30px;font-size:13px;padding:0 10px;width:clamp(80px,14vw,150px);min-width:0;flex:1}
+    /* The add button is a square "+", so the field beside it gets the width the
+       label used to take: roughly three more characters at 13px. */
+    .tp-add-btn{width:30px;height:30px;padding:0;justify-content:center;flex:none;align-self:flex-start}
+    .tp-add-btn svg{flex:none}
     /* The add field is a one-row textarea so it can hold newlines: 30px tall at one
        line, growing to a small ceiling before it scrolls. */
     .tp-add-inline textarea.tp-add-input{height:auto;min-height:30px;max-height:96px;line-height:20px;padding:5px 10px;resize:none;overflow-y:auto;font-family:inherit}
@@ -1388,6 +1394,10 @@ window.__ModuleLoader__.load({
         : null;
 
       const placeholder = isEntriesTab ? t('addNotePlaceholder') : t('addTodoPlaceholder');
+      // The button is a bare "+": the field beside it already says what will be
+      // added ("添加待办" / "添加笔记" as its placeholder), so a text label repeated
+      // it and cost the width the field needs. The label survives as the accessible
+      // name and the tooltip.
       const addLabel = isEntriesTab ? t('addNote') : t('add');
       const submit = () => (isEntriesTab ? addNote(group.id) : addTodo(group.id));
 
@@ -1416,9 +1426,11 @@ window.__ModuleLoader__.load({
             }),
             h('button', {
               type: 'button',
-              className: 'tp-btn tp-btn-primary',
+              className: 'tp-btn tp-btn-primary tp-add-btn',
               onClick: submit,
-            }, h(PlusIcon, { size: 13 }), addLabel))
+              title: addLabel,
+              'aria-label': addLabel,
+            }, h(PlusIcon, { size: 14 })))
         : null;
 
       if (api.searching && !groupHit && shown.length === 0) return null;

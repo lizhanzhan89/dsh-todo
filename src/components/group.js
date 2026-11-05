@@ -112,6 +112,10 @@ function renderGroup(group, api) {
     : null;
 
   const placeholder = isEntriesTab ? t('addNotePlaceholder') : t('addTodoPlaceholder');
+  // The button is a bare "+": the field beside it already says what will be
+  // added ("添加待办" / "添加笔记" as its placeholder), so a text label repeated
+  // it and cost the width the field needs. The label survives as the accessible
+  // name and the tooltip.
   const addLabel = isEntriesTab ? t('addNote') : t('add');
   const submit = () => (isEntriesTab ? addNote(group.id) : addTodo(group.id));
 
@@ -140,9 +144,11 @@ function renderGroup(group, api) {
         }),
         h('button', {
           type: 'button',
-          className: 'tp-btn tp-btn-primary',
+          className: 'tp-btn tp-btn-primary tp-add-btn',
           onClick: submit,
-        }, h(PlusIcon, { size: 13 }), addLabel))
+          title: addLabel,
+          'aria-label': addLabel,
+        }, h(PlusIcon, { size: 14 })))
     : null;
 
   if (api.searching && !groupHit && shown.length === 0) return null;
