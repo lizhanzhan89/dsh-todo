@@ -1,5 +1,5 @@
 /**
- * Host half of the Memo bundle.
+ * Host half of the dsh-todo bundle.
  *
  * Owns the JSON data file and exposes it over one authenticated HTTP route that
  * the Client half talks to:
@@ -25,7 +25,7 @@ const DEFAULT_FILE_NAME = 'dsh-todo.json';
  * Documents folder, not the workspace.
  *
  * The workspace is a working area that gets wiped, cloned or switched between
- * projects; the memos are personal data that has to outlive all of that. The
+ * projects; this data is personal and has to outlive all of that. The
  * folder name is localized, so it is derived from the home directory rather than
  * hard-coded - `~/Documents` on an English macOS, `~/文稿` on a Chinese one.
  */

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Memo",
-    "description": "A memo panel in the sidebar: todos and notes organized by project."
+    "title": "Todos",
+    "description": "Todos panel (dsh-todo) in the sidebar: todos and notes organized by project."
   }
 }
