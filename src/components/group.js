@@ -101,16 +101,23 @@ function renderGroup(group, api) {
   // Add controls sit in the header's right column. The compact form keeps them
   // from squeezing the centred title. "All" takes an input too: it adds a todo,
   // the default kind.
+  //
+  // The field is a one-row textarea so a multi-line entry can be typed: Enter
+  // inserts a newline and Ctrl/Cmd+Enter adds the item, which is what a plain
+  // textarea user expects. Shift+Enter is left to the browser.
   const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES || isAllTab)
     ? h('div', { className: 'tp-add-inline' },
-        h('input', {
-          className: 'tp-input',
-          type: 'text',
+        h('textarea', {
+          className: 'tp-input tp-add-input',
+          rows: 1,
           placeholder,
           value: draftFor(group.id),
           onChange: (event) => setDraftFor(group.id, event.target.value),
           onKeyDown: (event) => {
-            if (event.key === 'Enter') { event.preventDefault(); submit(); }
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault();
+              submit();
+            }
           },
           'aria-label': placeholder,
         }),
