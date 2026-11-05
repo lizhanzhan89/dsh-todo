@@ -585,6 +585,10 @@ window.__ModuleLoader__.load({
     /* Taller than the plain input: this field is a one-off action, and at 32px it
        read as an inline chip next to the buttons under it. */
     .tp-nav-create .tp-input{height:38px;font-size:13.5px;padding:0 12px}
+    /* The base .tp-input rule sets height 34px and is written later in this file,
+       so at equal specificity it won and the field stayed 34px. Targeting the
+       element as well raises the specificity, so the taller field applies. */
+    .tp-nav-create input.tp-input{height:38px;font-size:13.5px;padding:0 12px}
     .tp-nav-create-actions{display:flex;gap:6px}
     .tp-nav-create-actions .tp-btn{flex:1;justify-content:center;height:30px;padding:0 8px}
     .tp-pane{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}
@@ -666,6 +670,9 @@ window.__ModuleLoader__.load({
        line, growing to a small ceiling before it scrolls. */
     .tp-add-inline textarea.tp-add-input{height:auto;min-height:30px;max-height:96px;line-height:20px;padding:5px 10px;resize:none;overflow-y:auto;font-family:inherit}
     .tp-add-inline .tp-btn{height:30px;padding:0 10px;font-size:13px;flex:none;align-self:flex-start}
+    /* Beats the rule directly above, which ties on specificity and would give the
+       "+" button back its 10px padding and stop it being a 30px square. */
+    .tp-add-inline .tp-btn.tp-add-btn{width:30px;height:30px;padding:0;justify-content:center}
     /* A strip under the group header for the "All" tab's own switch. */
     .tp-group-tools{display:flex;justify-content:flex-end;padding:6px 14px 0}
     .tp-inline-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:pointer;user-select:none}
