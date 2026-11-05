@@ -4,8 +4,8 @@
  * `{name}`, `{count}`, `{time}` and `{query}` are replaced by the caller.
  */
 const en = {
-  panel: 'Memos',
-  title: 'Memos',
+  panel: 'Memo',
+  title: 'Memo',
   subtitle: 'Todos and notes, organized by project.',
   noProject: 'Default',
   noProjectHint: 'Todos that belong to no project.',
@@ -82,7 +82,7 @@ const en = {
   import: 'Import',
   importHint: 'Add projects and items from a JSON backup file. Existing items are kept.',
   importDone: 'Imported {projects} projects, {items} items and {trash} recycle-bin records.',
-  importInvalid: 'That file is not a Memos backup.',
+  importInvalid: 'That file is not a Memo backup.',
   importEmpty: 'That backup contains no projects or todos.',
   importFailed: 'Import failed: {error}',
 };

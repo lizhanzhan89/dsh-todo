@@ -42,7 +42,7 @@ const SOURCES = [
 ];
 
 const HEADER = `/**
- * Client half of the Memos bundle (sidebar panel "todos").
+ * Client half of the Memo bundle (sidebar panel "todos").
  *
  * GENERATED FILE — do not edit. Sources live in \`src/\`; run
  * \`node build.mjs\` from the package root to regenerate this file.

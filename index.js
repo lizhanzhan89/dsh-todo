@@ -1,5 +1,5 @@
 /**
- * Host half of the Memos bundle.
+ * Host half of the Memo bundle.
  *
  * Owns the JSON data file and exposes it over one authenticated HTTP route that
  * the Client half talks to:
@@ -11,6 +11,7 @@
  * so a reader never sees a half-written file.
  */
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 
 export const name = 'dsh-todo';
@@ -18,6 +19,19 @@ export const inject = ['webServer', 'connection'];
 
 const ROUTE_PATH = '/api/dsh-todo';
 const DEFAULT_FILE_NAME = 'dsh-todo.json';
+
+/**
+ * Where the data file lives when the row sets no `config.fileName`: the user's
+ * Documents folder, not the workspace.
+ *
+ * The workspace is a working area that gets wiped, cloned or switched between
+ * projects; the memos are personal data that has to outlive all of that. The
+ * folder name is localized, so it is derived from the home directory rather than
+ * hard-coded - `~/Documents` on an English macOS, `~/文稿` on a Chinese one.
+ */
+function documentsDir() {
+  return join(homedir(), 'Documents');
+}
 
 /**
  * Keep the record fields the Client persists.
@@ -44,15 +58,11 @@ function pickState(state) {
 }
 
 export function apply(ctx, config = {}) {
-  const workingDirectory = ctx.get('workingDirectory');
-  const baseDir =
-    (workingDirectory && typeof workingDirectory.defaultDirectory === 'string' && workingDirectory.defaultDirectory) ||
-    process.cwd();
-  // The row's `config.fileName` may override the data file name; an absolute
-  // path is used as-is, anything else resolves against the workspace root.
+  // The row's `config.fileName` may override the location; an absolute path is
+  // used as-is, anything else resolves against the Documents folder.
   const requested = config && typeof config.fileName === 'string' ? config.fileName.trim() : '';
   const fileName = requested || DEFAULT_FILE_NAME;
-  const dataFile = isAbsolute(fileName) ? resolve(fileName) : join(baseDir, fileName);
+  const dataFile = isAbsolute(fileName) ? resolve(fileName) : join(documentsDir(), fileName);
 
   async function readState() {
     try {

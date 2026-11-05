@@ -25,10 +25,10 @@
 const BACKUP_FORMAT = 'dsh-todo';
 const BACKUP_VERSION = 1;
 
-/** A file name that sorts by date: `memos-2024-05-01.json`. */
+/** A file name that sorts by date: `dsh-todo-2024-05-01.json`. */
 function backupFileName(date = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
-  return 'memos-' + date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + '.json';
+  return 'dsh-todo-' + date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + '.json';
 }
 
 /** The document written by "export". */

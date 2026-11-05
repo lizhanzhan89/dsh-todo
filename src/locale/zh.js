@@ -2,8 +2,8 @@
  * Chinese copy (default UI language here). Keys must stay in step with `en.js`.
  */
 const zh = {
-  panel: '备忘录',
-  title: '备忘录',
+  panel: '备忘',
+  title: '备忘',
   subtitle: '按项目分组的待办与笔记。',
   noProject: '默认',
   noProjectHint: '不属于任何项目的待办。',
@@ -80,7 +80,7 @@ const zh = {
   import: '导入',
   importHint: '从 JSON 备份文件导入项目与条目，已有内容会保留。',
   importDone: '已导入 {projects} 个项目、{items} 个条目和 {trash} 条回收站记录。',
-  importInvalid: '这个文件不是备忘录的备份文件。',
+  importInvalid: '这个文件不是备忘的备份文件。',
   importEmpty: '这个备份里没有项目或待办。',
   importFailed: '导入失败：{error}',
 };
