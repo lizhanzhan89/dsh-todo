@@ -64,7 +64,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-05.3';
+    const BUILD = '2026-11-05.4';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -592,11 +592,11 @@ window.__ModuleLoader__.load({
     .tp-nav-create{display:flex;flex-direction:column;gap:6px}
     /* Taller than the plain input: this field is a one-off action, and at 32px it
        read as an inline chip next to the buttons under it. */
-    .tp-nav-create .tp-input{height:38px;font-size:13.5px;padding:0 12px}
-    /* The base .tp-input rule sets height 34px and is written later in this file,
-       so at equal specificity it won and the field stayed 34px. Targeting the
-       element as well raises the specificity, so the taller field applies. */
-    .tp-nav-create input.tp-input{height:38px;font-size:13.5px;padding:0 12px}
+    /* One rule only. An earlier attempt kept a second copy that the base .tp-input
+       rule overrode at equal specificity, which is what made the height look
+       ignored. The element selector raises specificity so there is no tie left to
+       lose. */
+    .tp-nav-create input.tp-input{height:44px;font-size:14px;padding:0 12px;border-radius:10px}
     .tp-nav-create-actions{display:flex;gap:6px}
     .tp-nav-create-actions .tp-btn{flex:1;justify-content:center;height:30px;padding:0 8px}
     .tp-pane{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}
@@ -671,7 +671,12 @@ window.__ModuleLoader__.load({
     .tp-todo.is-done .tp-todo-text{color:var(--dsw-alias-label-secondary);text-decoration:line-through}
     .tp-locked{cursor:default}
     .tp-add-inline{display:flex;align-items:flex-end;gap:6px;min-width:0;max-width:100%}
-    .tp-add-inline .tp-input{height:30px;font-size:13px;padding:0 10px;width:clamp(80px,14vw,150px);min-width:0;flex:1}
+    /* The field grows with its container. It used to be capped at
+       clamp(80px,14vw,150px), which is 150px on any screen wider than ~1070px: that
+       cap, not the layout, was why narrowing the button freed nothing. flex:1 with
+       a 16em basis lets the field take whatever the header leaves, and 16em reads
+       as the placeholder's natural width. */
+    .tp-add-inline .tp-input{height:32px;font-size:13px;padding:0 10px;width:auto;flex:1 1 16em;max-width:100%;min-width:0}
     /* The add button is a square "+", so the field beside it gets the width the
        label used to take: roughly three more characters at 13px. */
     .tp-add-btn{width:30px;height:30px;padding:0;justify-content:center;flex:none;align-self:flex-start}
