@@ -82,29 +82,36 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
 .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
 .tp-todos{list-style:none;margin:0;padding:6px}
-.tp-todo{display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 6px;border-radius:10px;border-left:2px solid transparent;transition:background .12s,border-color .12s}
+.tp-todo{position:relative;display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 12px;border-radius:10px;transition:background .12s}
 .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
-/* Every row carries a left accent so it reads as one block rather than as loose
-   text: todos take the brand colour, notes a neutral one, done rows go green. */
-.tp-todo.is-todo{border-left-color:var(--dsw-alias-brand-primary)}
-.tp-todo.tp-entry{border-left-color:var(--dsw-alias-border-l1)}
-.tp-todo.is-done{border-left-color:var(--dsw-alias-state-success-primary)}
+/* The accent bar is a pseudo-element inset from the row's own top and bottom,
+   not a left border: a border runs the full height, so stacked rows joined into
+   one unbroken line. Insetting it keeps neighbouring bars visibly separate. */
+.tp-todo::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:1px;background:transparent;transition:background .12s}
+.tp-todo.is-todo::before{background:var(--dsw-alias-brand-primary)}
+.tp-todo.tp-entry::before{background:var(--dsw-alias-border-l1)}
+.tp-todo.is-done::before{background:var(--dsw-alias-state-success-primary)}
 .tp-check{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l1);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#fff}
 .tp-check.is-done{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}
 .tp-check:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
-.tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px}
+/* pre-wrap keeps the newlines a user typed and still wraps long lines. */
+.tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px;white-space:pre-wrap}
 .tp-todo.is-todo .tp-todo-text{font-weight:500}
 .tp-todo.tp-entry .tp-todo-text{font-size:13.5px}
 .tp-editable{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
 .tp-editable:hover{background:var(--dsw-alias-bg-base);box-shadow:0 0 0 1px var(--dsw-alias-border-l1)}
-.tp-edit-input{height:28px;font-size:14px;padding:0 8px;margin:-3px 0}
+/* The inline editor grows with its text instead of staying one line high. */
+.tp-edit-input{min-height:28px;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow:hidden;font-family:inherit}
 .tp-edit-btn{opacity:0;transition:opacity .12s}
 .tp-todo:hover .tp-edit-btn,.tp-edit-btn:focus-visible{opacity:1}
 .tp-todo.is-done .tp-todo-text{color:var(--dsw-alias-label-secondary);text-decoration:line-through}
 .tp-locked{cursor:default}
-.tp-add-inline{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+.tp-add-inline{display:flex;align-items:flex-end;gap:6px;min-width:0;max-width:100%}
 .tp-add-inline .tp-input{height:30px;font-size:13px;padding:0 10px;width:clamp(80px,14vw,150px);min-width:0;flex:1}
-.tp-add-inline .tp-btn{height:30px;padding:0 10px;font-size:13px;flex:none}
+/* The add field is a one-row textarea so it can hold newlines: 30px tall at one
+   line, growing to a small ceiling before it scrolls. */
+.tp-add-inline textarea.tp-add-input{height:auto;min-height:30px;max-height:96px;line-height:20px;padding:5px 10px;resize:none;overflow-y:auto;font-family:inherit}
+.tp-add-inline .tp-btn{height:30px;padding:0 10px;font-size:13px;flex:none;align-self:flex-start}
 .tp-empty{padding:26px 16px;text-align:center;color:var(--dsw-alias-label-secondary);font-size:13px}
 .tp-empty strong{display:block;margin-bottom:4px;color:var(--dsw-alias-label-primary);font-weight:500}
 .tp-muted{color:var(--dsw-alias-label-secondary)}

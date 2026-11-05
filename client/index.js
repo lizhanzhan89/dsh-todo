@@ -600,29 +600,36 @@ window.__ModuleLoader__.load({
     .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
     .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
     .tp-todos{list-style:none;margin:0;padding:6px}
-    .tp-todo{display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 6px;border-radius:10px;border-left:2px solid transparent;transition:background .12s,border-color .12s}
+    .tp-todo{position:relative;display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 12px;border-radius:10px;transition:background .12s}
     .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
-    /* Every row carries a left accent so it reads as one block rather than as loose
-       text: todos take the brand colour, notes a neutral one, done rows go green. */
-    .tp-todo.is-todo{border-left-color:var(--dsw-alias-brand-primary)}
-    .tp-todo.tp-entry{border-left-color:var(--dsw-alias-border-l1)}
-    .tp-todo.is-done{border-left-color:var(--dsw-alias-state-success-primary)}
+    /* The accent bar is a pseudo-element inset from the row's own top and bottom,
+       not a left border: a border runs the full height, so stacked rows joined into
+       one unbroken line. Insetting it keeps neighbouring bars visibly separate. */
+    .tp-todo::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:1px;background:transparent;transition:background .12s}
+    .tp-todo.is-todo::before{background:var(--dsw-alias-brand-primary)}
+    .tp-todo.tp-entry::before{background:var(--dsw-alias-border-l1)}
+    .tp-todo.is-done::before{background:var(--dsw-alias-state-success-primary)}
     .tp-check{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l1);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#fff}
     .tp-check.is-done{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}
     .tp-check:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
-    .tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px}
+    /* pre-wrap keeps the newlines a user typed and still wraps long lines. */
+    .tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px;white-space:pre-wrap}
     .tp-todo.is-todo .tp-todo-text{font-weight:500}
     .tp-todo.tp-entry .tp-todo-text{font-size:13.5px}
     .tp-editable{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
     .tp-editable:hover{background:var(--dsw-alias-bg-base);box-shadow:0 0 0 1px var(--dsw-alias-border-l1)}
-    .tp-edit-input{height:28px;font-size:14px;padding:0 8px;margin:-3px 0}
+    /* The inline editor grows with its text instead of staying one line high. */
+    .tp-edit-input{min-height:28px;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow:hidden;font-family:inherit}
     .tp-edit-btn{opacity:0;transition:opacity .12s}
     .tp-todo:hover .tp-edit-btn,.tp-edit-btn:focus-visible{opacity:1}
     .tp-todo.is-done .tp-todo-text{color:var(--dsw-alias-label-secondary);text-decoration:line-through}
     .tp-locked{cursor:default}
-    .tp-add-inline{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+    .tp-add-inline{display:flex;align-items:flex-end;gap:6px;min-width:0;max-width:100%}
     .tp-add-inline .tp-input{height:30px;font-size:13px;padding:0 10px;width:clamp(80px,14vw,150px);min-width:0;flex:1}
-    .tp-add-inline .tp-btn{height:30px;padding:0 10px;font-size:13px;flex:none}
+    /* The add field is a one-row textarea so it can hold newlines: 30px tall at one
+       line, growing to a small ceiling before it scrolls. */
+    .tp-add-inline textarea.tp-add-input{height:auto;min-height:30px;max-height:96px;line-height:20px;padding:5px 10px;resize:none;overflow-y:auto;font-family:inherit}
+    .tp-add-inline .tp-btn{height:30px;padding:0 10px;font-size:13px;flex:none;align-self:flex-start}
     .tp-empty{padding:26px 16px;text-align:center;color:var(--dsw-alias-label-secondary);font-size:13px}
     .tp-empty strong{display:block;margin-bottom:4px;color:var(--dsw-alias-label-primary);font-weight:500}
     .tp-muted{color:var(--dsw-alias-label-secondary)}
@@ -722,17 +729,20 @@ window.__ModuleLoader__.load({
 
     /* --- tab glyphs ---------------------------------------------------------- */
 
-    /** "Not done": an empty circle. */
+    /**
+     * "Active": an empty checkbox — the same square the row's checkbox would take,
+     * so the tab reads as "not done yet" rather than as a generic circle.
+     */
     function CircleIcon({ size = 13 }) {
       return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
-        h('circle', { cx: 8, cy: 8, r: 5.2, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }));
+        h('rect', { x: 3, y: 3, width: 10, height: 10, rx: 2.4, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }));
     }
 
-    /** "Done": a circle with a tick inside. */
+    /** "Done": a ticked checkbox, filled so it reads at 13px. */
     function DoneCircleIcon({ size = 13 }) {
       return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
-        h('circle', { cx: 8, cy: 8, r: 5.2, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }),
-        h('path', { d: 'M5.6 8.2l1.7 1.7 3.2-3.6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+        h('rect', { x: 3, y: 3, width: 10, height: 10, rx: 2.4, fill: 'currentColor' }),
+        h('path', { d: 'M5.6 8.1l1.7 1.7 3.2-3.6', fill: 'none', stroke: 'var(--dsw-alias-bg-base)', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }));
     }
 
     /** "Notes": a page with a folded corner and two lines. */
@@ -743,10 +753,17 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M5.6 9h4.8M5.6 11.3h3.2', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round' }));
     }
 
-    /** "All": a stacked pair of lists. */
+    /**
+     * "All": a 2x2 grid, one filled cell standing for each kind in the mix. A grid
+     * reads as "everything collected" and cannot be mistaken for a checkbox, which
+     * is what the three-bars glyph looked like next to the empty-circle one.
+     */
     function StackIcon({ size = 13 }) {
       return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
-        h('path', { d: 'M2.6 5.2h10.8M2.6 8h10.8M2.6 10.8h7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+        h('rect', { x: 2.4, y: 2.4, width: 5, height: 5, rx: 1.3, fill: 'currentColor', opacity: .95 }),
+        h('rect', { x: 8.6, y: 2.4, width: 5, height: 5, rx: 1.3, fill: 'currentColor', opacity: .45 }),
+        h('rect', { x: 2.4, y: 8.6, width: 5, height: 5, rx: 1.3, fill: 'currentColor', opacity: .45 }),
+        h('rect', { x: 8.6, y: 8.6, width: 5, height: 5, rx: 1.3, fill: 'currentColor', opacity: .95 }));
     }
 
     /**
@@ -755,7 +772,9 @@ window.__ModuleLoader__.load({
      * look the same.
      */
     function KindBadge({ kind, label, size = 14 }) {
-      const Icon = kind === KIND_ENTRY ? NoteIcon : DoneCircleIcon;
+      // A todo takes the empty checkbox rather than the ticked one: a badge says
+      // what the row *is*, and the ticked glyph would imply every todo is done.
+      const Icon = kind === KIND_ENTRY ? NoteIcon : CircleIcon;
       return h('span', {
         className: 'tp-kind tp-kind-' + (kind === KIND_ENTRY ? 'note' : 'todo'),
         title: label,
@@ -1038,14 +1057,19 @@ window.__ModuleLoader__.load({
     function editableText(item, api) {
       const { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t } = api;
       if (editingId === item.id && canEdit(item)) {
-        return h('input', {
+        // A textarea, not an input: a todo or note may span several lines. Enter
+        // inserts a newline and Ctrl/Cmd+Enter saves, matching the add field.
+        return h('textarea', {
           className: 'tp-input tp-edit-input',
-          type: 'text',
+          rows: 1,
           autoFocus: true,
           value: editDraft,
           onChange: (event) => setEditDraft(event.target.value),
           onKeyDown: (event) => {
-            if (event.key === 'Enter') { event.preventDefault(); commitEdit(); }
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault();
+              commitEdit();
+            }
             if (event.key === 'Escape') { event.preventDefault(); cancelEdit(); }
           },
           onBlur: commitEdit,
@@ -1264,16 +1288,23 @@ window.__ModuleLoader__.load({
       // Add controls sit in the header's right column. The compact form keeps them
       // from squeezing the centred title. "All" takes an input too: it adds a todo,
       // the default kind.
+      //
+      // The field is a one-row textarea so a multi-line entry can be typed: Enter
+      // inserts a newline and Ctrl/Cmd+Enter adds the item, which is what a plain
+      // textarea user expects. Shift+Enter is left to the browser.
       const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES || isAllTab)
         ? h('div', { className: 'tp-add-inline' },
-            h('input', {
-              className: 'tp-input',
-              type: 'text',
+            h('textarea', {
+              className: 'tp-input tp-add-input',
+              rows: 1,
               placeholder,
               value: draftFor(group.id),
               onChange: (event) => setDraftFor(group.id, event.target.value),
               onKeyDown: (event) => {
-                if (event.key === 'Enter') { event.preventDefault(); submit(); }
+                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault();
+                  submit();
+                }
               },
               'aria-label': placeholder,
             }),

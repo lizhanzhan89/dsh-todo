@@ -21,14 +21,19 @@ const canEdit = (item) => !item.done;
 function editableText(item, api) {
   const { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t } = api;
   if (editingId === item.id && canEdit(item)) {
-    return h('input', {
+    // A textarea, not an input: a todo or note may span several lines. Enter
+    // inserts a newline and Ctrl/Cmd+Enter saves, matching the add field.
+    return h('textarea', {
       className: 'tp-input tp-edit-input',
-      type: 'text',
+      rows: 1,
       autoFocus: true,
       value: editDraft,
       onChange: (event) => setEditDraft(event.target.value),
       onKeyDown: (event) => {
-        if (event.key === 'Enter') { event.preventDefault(); commitEdit(); }
+        if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          commitEdit();
+        }
         if (event.key === 'Escape') { event.preventDefault(); cancelEdit(); }
       },
       onBlur: commitEdit,

@@ -45,17 +45,20 @@ function TodoIcon({ size = 18 }) {
 
 /* --- tab glyphs ---------------------------------------------------------- */
 
-/** "Not done": an empty circle. */
+/**
+ * "Active": an empty checkbox — the same square the row's checkbox would take,
+ * so the tab reads as "not done yet" rather than as a generic circle.
+ */
 function CircleIcon({ size = 13 }) {
   return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
-    h('circle', { cx: 8, cy: 8, r: 5.2, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }));
+    h('rect', { x: 3, y: 3, width: 10, height: 10, rx: 2.4, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }));
 }
 
-/** "Done": a circle with a tick inside. */
+/** "Done": a ticked checkbox, filled so it reads at 13px. */
 function DoneCircleIcon({ size = 13 }) {
   return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
-    h('circle', { cx: 8, cy: 8, r: 5.2, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }),
-    h('path', { d: 'M5.6 8.2l1.7 1.7 3.2-3.6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    h('rect', { x: 3, y: 3, width: 10, height: 10, rx: 2.4, fill: 'currentColor' }),
+    h('path', { d: 'M5.6 8.1l1.7 1.7 3.2-3.6', fill: 'none', stroke: 'var(--dsw-alias-bg-base)', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }));
 }
 
 /** "Notes": a page with a folded corner and two lines. */
@@ -66,10 +69,17 @@ function NoteIcon({ size = 13 }) {
     h('path', { d: 'M5.6 9h4.8M5.6 11.3h3.2', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round' }));
 }
 
-/** "All": a stacked pair of lists. */
+/**
+ * "All": a 2x2 grid, one filled cell standing for each kind in the mix. A grid
+ * reads as "everything collected" and cannot be mistaken for a checkbox, which
+ * is what the three-bars glyph looked like next to the empty-circle one.
+ */
 function StackIcon({ size = 13 }) {
   return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
-    h('path', { d: 'M2.6 5.2h10.8M2.6 8h10.8M2.6 10.8h7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+    h('rect', { x: 2.4, y: 2.4, width: 5, height: 5, rx: 1.3, fill: 'currentColor', opacity: .95 }),
+    h('rect', { x: 8.6, y: 2.4, width: 5, height: 5, rx: 1.3, fill: 'currentColor', opacity: .45 }),
+    h('rect', { x: 2.4, y: 8.6, width: 5, height: 5, rx: 1.3, fill: 'currentColor', opacity: .45 }),
+    h('rect', { x: 8.6, y: 8.6, width: 5, height: 5, rx: 1.3, fill: 'currentColor', opacity: .95 }));
 }
 
 /**
@@ -78,7 +88,9 @@ function StackIcon({ size = 13 }) {
  * look the same.
  */
 function KindBadge({ kind, label, size = 14 }) {
-  const Icon = kind === KIND_ENTRY ? NoteIcon : DoneCircleIcon;
+  // A todo takes the empty checkbox rather than the ticked one: a badge says
+  // what the row *is*, and the ticked glyph would imply every todo is done.
+  const Icon = kind === KIND_ENTRY ? NoteIcon : CircleIcon;
   return h('span', {
     className: 'tp-kind tp-kind-' + (kind === KIND_ENTRY ? 'note' : 'todo'),
     title: label,
