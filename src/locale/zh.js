@@ -32,6 +32,7 @@ const zh = {
   tabActive: '未完成',
   tabDone: '已完成',
   tabEntries: '笔记',
+  showDoneInAll: '包含已完成',
   kindTodo: '待办',
   kindNote: '笔记',
   allEmpty: '这一组还是空的',

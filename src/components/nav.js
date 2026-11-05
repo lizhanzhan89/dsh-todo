@@ -158,7 +158,9 @@ function dataControls(api) {
     },
   });
 
-  return h('div', { className: 'tp-nav-data' },
+  // The three buttons act on the whole store, so they get a wash of their own
+  // and read as one area rather than as three loose buttons.
+  return h('div', { className: 'tp-nav-data', style: rowTint(false, false) },
     h('button', {
       type: 'button',
       className: 'tp-btn tp-nav-data-btn' + (syncing ? ' is-busy' : ''),

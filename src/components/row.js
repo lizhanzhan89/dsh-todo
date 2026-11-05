@@ -12,31 +12,28 @@
 const canEdit = (item) => !item.done;
 
 /**
- * The text of a collapsed row.
- *
- * `pre-wrap` keeps every newline, but an unbounded item would push one row to
- * the height of the whole note. Lines are cut on their own rather than with a
- * CSS line clamp, which would also cut the line horizontally: a long line is
- * sliced at COLLAPSED_CHARS, and past COLLAPSED_LINES lines the last shown line
- * ends in an ellipsis. The full text stays in `item.text`, in the editor and in
- * the tooltip.
+ * Lines the editor needs for this text, counting wrapped lines, capped at
+ * EDIT_ROWS. A short item gets a short field; a long one scrolls inside three
+ * rows. `wrapAt` is the field's text columns, measured from its width and font
+ * so a wrapped line is not mistaken for a short one.
  */
-function collapsedText(text) {
-  const lines = String(text == null ? '' : text).split('\n');
-  const shown = lines.slice(0, COLLAPSED_LINES).map((line) =>
-    (line.length > COLLAPSED_CHARS ? line.slice(0, COLLAPSED_CHARS) + '…' : line));
-  if (lines.length > COLLAPSED_LINES) shown[shown.length - 1] += '…';
-  return shown.join('\n');
+function editorRows(text, wrapAt) {
+  const cols = Math.max(12, wrapAt | 0);
+  let rows = 0;
+  String(text == null ? '' : text).split('\n').forEach((line) => {
+    // An empty line still takes one row.
+    rows += Math.max(1, Math.ceil(line.length / cols));
+  });
+  return Math.min(EDIT_ROWS, Math.max(1, rows));
 }
 
 /**
  * The text of a row: an editor while that row is being edited, otherwise a span
  * that opens the editor on double-click, or a locked span when read-only.
  *
- * The editor is a textarea fixed at three text rows: an item may span many
- * lines, and a one-row field would show only the first one, while growing
- * without a cap would shove the rest of the list around. Past three lines it
- * scrolls, so the row keeps a predictable height.
+ * The row itself shows the whole text, newlines and all. Only the editor is
+ * bounded: it opens as tall as the text needs and never taller than EDIT_ROWS,
+ * scrolling past that, so typing into a long item does not push the list around.
  *
  * @param {object} item the todo or note
  * @param {object} api  { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t }
@@ -45,9 +42,11 @@ function editableText(item, api) {
   const { editingId, editDraft, setEditDraft, startEdit, cancelEdit, commitEdit, t } = api;
   if (editingId === item.id && canEdit(item)) {
     // Enter inserts a newline and Ctrl/Cmd+Enter saves, matching the add field.
+    // `rows` follows the text: a two-line item gets a two-row field.
+    const rows = editorRows(editDraft, api.editCols());
     return h('textarea', {
       className: 'tp-input tp-edit-input',
-      rows: EDIT_ROWS,
+      rows,
       autoFocus: true,
       value: editDraft,
       onChange: (event) => setEditDraft(event.target.value),
@@ -68,13 +67,34 @@ function editableText(item, api) {
     return h('span', {
       className: 'tp-todo-text tp-locked',
       title: t('editLocked'),
-    }, collapsedText(item.text));
+    }, item.text);
   }
   return h('span', {
     className: 'tp-todo-text tp-editable',
-    title: item.text,
+    title: t('editHint'),
     onDoubleClick: () => startEdit(item),
-  }, collapsedText(item.text));
+  }, item.text);
+}
+
+/**
+ * The row's faint wash, by kind. Hex tints at low alpha rather than theme
+ * tokens: the alias tokens swing hard between light and dark, and the note grey
+ * has to stay grey in both. At .06–.1 the value is not readable as a colour,
+ * only as a fill that separates one row from the next.
+ *
+ * Notes are given the strongest and greyest wash on purpose: they carry no
+ * checkbox, so colour is what says "this one is a note" at a glance.
+ */
+const TINT = {
+  todo: 'rgb(96 138 235 / .07)',
+  done: 'rgb(84 168 112 / .06)',
+  note: 'rgb(118 122 130 / .12)',
+};
+
+/** The wash for a row, from the row's own kind. */
+function rowTint(isTodo, isDone) {
+  const key = isTodo ? (isDone ? 'done' : 'todo') : 'note';
+  return { background: TINT[key] };
 }
 
 /**
@@ -96,6 +116,7 @@ function renderEntry(item, api, options) {
   return h('li', {
     key: item.id,
     className: 'tp-todo tp-entry' + (withKind ? ' has-kind' : '') + api.itemDragClass(item),
+    style: rowTint(false, false),
     ...api.itemDragProps(item),
   },
     renderGrip(item, api),
@@ -125,6 +146,7 @@ function renderTodo(todo, api, options) {
   return h('li', {
     key: todo.id,
     className: 'tp-todo is-todo' + (withKind ? ' has-kind' : '') + (todo.done ? ' is-done' : '') + api.itemDragClass(todo),
+    style: rowTint(true, todo.done),
     ...api.itemDragProps(todo),
   },
     renderGrip(todo, api),

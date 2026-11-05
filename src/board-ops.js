@@ -9,6 +9,13 @@
 /** A note (plain text, no checkbox) rather than a todo. */
 const isEntry = (item) => item.kind === KIND_ENTRY;
 
+/**
+ * Whether the combined "All" tab lists finished todos. That tab is a review of
+ * the whole group, so it can hold the archive; the saved flag is only the
+ * starting point, and the tab's own toggle edits it.
+ */
+const showDoneInAll = (state) => state.includeDone !== false;
+
 /** Key used for drafts, tabs and group anchors: project id or the default slot. */
 const groupKey = (projectId) => projectId || NO_PROJECT;
 
@@ -43,6 +50,11 @@ function toggleTodo(state, id) {
       return { ...todo, done, completedAt: done ? now() : null };
     }),
   };
+}
+
+/** Flip whether finished todos appear in the combined "All" tab. */
+function setIncludeDoneFlag(state, include) {
+  return { ...state, includeDone: !!include };
 }
 
 /** Replace an item's text. Blank text is rejected by the caller. */

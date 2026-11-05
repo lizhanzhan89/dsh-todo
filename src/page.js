@@ -33,8 +33,10 @@ function TodoPage(props) {
   const [view, setView] = React.useState('board');
   // Search across every todo, entry and project name.
   const [query, setQuery] = React.useState('');
-  // Completed todos stay hidden from search results unless this is ticked.
-  const [includeDone, setIncludeDone] = React.useState(false);
+  // Completed todos stay hidden from search results unless this is ticked. The
+  // value is stored in the data file (`includeDone`), so it is read from the
+  // loaded state rather than kept as local UI state, and the toggle writes it
+  // back like any other edit.
   // Inline editing: the id of the row being edited and its draft text.
   const [editingId, setEditingId] = React.useState(null);
   const [editDraft, setEditDraft] = React.useState('');
@@ -279,6 +281,12 @@ function TodoPage(props) {
 
   // --- derived values -------------------------------------------------------
   const groups = groupList(state, t('noProject'));
+  // The flag decides whether finished todos appear in the combined "All" tab
+  // and in search results. It is read straight from the state, so the file is
+  // the single source of truth and the toggle needs no extra sync.
+  const includeDone = state.includeDone !== false;
+  // The transition is named differently because this handler shadows it.
+  const setIncludeDone = (value) => update((prev) => setIncludeDoneFlag(prev, value));
   const needle = query.trim().toLowerCase();
   const searching = needle.length > 0;
   const matches = (text) => String(text || '').toLowerCase().includes(needle);
@@ -289,6 +297,28 @@ function TodoPage(props) {
     ? 0
     : state.todos.filter((item) => visibleInSearch(item) && matches(item.text)).length
       + state.projects.filter((project) => matches(project.name)).length;
+
+  /**
+   * Text columns available to the inline editor, measured from the actual
+   * field: its width minus padding and border, divided by the width of one
+   * character in the field's own font. Reading the live element avoids guessing
+   * at font metrics; the fallback covers a row that is not in the DOM yet.
+   */
+  const editCols = () => {
+    if (typeof document === 'undefined' || typeof document.querySelector !== 'function') return 30;
+    const field = document.querySelector('.tp-edit-input');
+    if (!field || !field.getBoundingClientRect) return 30;
+    const style = typeof getComputedStyle === 'function' ? getComputedStyle(field) : null;
+    const padding = style ? parseFloat(style.paddingLeft || 0) + parseFloat(style.paddingRight || 0) : 16;
+    const border = style ? parseFloat(style.borderLeftWidth || 0) + parseFloat(style.borderRightWidth || 0) : 1;
+    const width = field.getBoundingClientRect().width - padding - border;
+    if (!(width > 0)) return 30;
+    // A monospace-ish estimate from the computed font size: that is close
+    // enough to decide how many rows a line wraps into.
+    const fontSize = style ? parseFloat(style.fontSize || 14) : 14;
+    const perChar = fontSize * 0.55;
+    return Math.max(12, Math.floor(width / perChar));
+  };
 
   // --- drag handlers shared by todo and note rows ---------------------------
   // Only the grip starts a drag: the <li> itself is not draggable, so text
@@ -358,7 +388,7 @@ function TodoPage(props) {
   // React hooks themselves and stay easy to reason about.
   const api = {
     t, state, groups, view, activeGroup,
-    setView, setQuery, query, includeDone, setIncludeDone,
+    setView, setQuery, query, includeDone, setIncludeDone, editCols,
     setDragId, setDropId, dragId, dropId, setDragOverTrash, dragOverTrash,
     creatingProject, setCreatingProject, projectDraft, setProjectDraft,
     editingId, editDraft, setEditDraft,

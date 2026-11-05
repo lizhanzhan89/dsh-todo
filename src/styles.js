@@ -33,7 +33,11 @@ const CSS = `
 .tp-nav-empty{padding:8px 12px;color:var(--dsw-alias-label-secondary);font-size:12px}
 .tp-nav-foot{flex:none;padding:8px;border-top:.5px solid var(--dsw-alias-border-l1)}
 /* Export and import share one row above "New project". */
-.tp-nav-data{display:flex;gap:6px;margin-bottom:6px}
+.tp-nav-data{display:flex;gap:6px;margin:0 0 8px;padding:6px;border-radius:10px}
+/* The wash behind these buttons is the area's, so the buttons themselves stay
+   transparent until hovered. */
+.tp-nav-data .tp-btn{background:transparent;border-color:transparent}
+.tp-nav-data .tp-btn:hover{background:var(--dsw-alias-bg-base);border-color:var(--dsw-alias-border-l1)}
 .tp-nav-data-btn{flex:1;justify-content:center;min-width:0;height:30px;padding:0 6px;font-size:12px;gap:4px;white-space:nowrap}
 .tp-nav-data-btn svg{flex:none}
 .tp-nav-data-btn:disabled,.tp-nav-data-btn.is-busy{cursor:default;opacity:.55}
@@ -85,20 +89,30 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-todo{position:relative;display:flex;align-items:flex-start;gap:10px;padding:10px 8px 10px 12px;border-radius:10px;transition:background .12s}
 /* Hover deepens the wash slightly instead of swapping in a token colour, which
    would replace the kind's tint with a neutral one on every mouse-over. */
+/* Each row carries a faint wash instead of the old left bar: it marks the row
+   without an edge that has to line up with anything. Hover swaps in a token
+   layer, which reads as "this one" rather than as a different kind of row.
+   The wash itself is set inline per kind (see rowTint in components/row.js),
+   because it differs per kind and React owns that value. */
+.tp-todo{touch-action:manipulation}
 .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
 .tp-check{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l1);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#fff}
 .tp-check.is-done{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}
 .tp-check:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
-/* pre-wrap keeps the newlines a user typed and still wraps long lines. */
+/* pre-wrap keeps the newlines a user typed and still wraps long lines. The row
+   shows the whole item: it is the record, and hiding part of it behind an
+   ellipsis makes a three-line note look like a truncated one. Only the editor
+   is bounded to three rows. */
 .tp-todo-text{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;line-height:22px;white-space:pre-wrap}
 .tp-todo.is-todo .tp-todo-text{font-weight:500}
 .tp-todo.tp-entry .tp-todo-text{font-size:13.5px;color:var(--dsw-alias-label-secondary)}
 .tp-editable{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
 .tp-editable:hover{background:var(--dsw-alias-bg-base);box-shadow:0 0 0 1px var(--dsw-alias-border-l1)}
-/* The inline editor is three text rows tall whatever the text length: it shows
-   a multi-line item without a scrollbar, and scrolls past that instead of
-   pushing the rest of the list down while typing. */
-.tp-edit-input{height:auto;min-height:68px;max-height:68px;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow-y:auto;font-family:inherit}
+/* The inline editor is sized in JS to the text it holds: one row for a short
+   item, up to three, then it scrolls. A fixed three-row field was tried first
+   and left two empty rows under a one-line todo. The row height is the same
+   68px ceiling, so the list does not jump when the editor opens. */
+.tp-edit-input{height:auto;font-size:14px;line-height:20px;padding:4px 8px;margin:-4px 0;resize:none;overflow-y:auto;max-height:68px;font-family:inherit}
 .tp-edit-btn{opacity:0;transition:opacity .12s}
 .tp-todo:hover .tp-edit-btn,.tp-edit-btn:focus-visible{opacity:1}
 .tp-todo.is-done .tp-todo-text{color:var(--dsw-alias-label-secondary);text-decoration:line-through}
@@ -109,6 +123,10 @@ label.tp-nav-data-btn{cursor:pointer}
    line, growing to a small ceiling before it scrolls. */
 .tp-add-inline textarea.tp-add-input{height:auto;min-height:30px;max-height:96px;line-height:20px;padding:5px 10px;resize:none;overflow-y:auto;font-family:inherit}
 .tp-add-inline .tp-btn{height:30px;padding:0 10px;font-size:13px;flex:none;align-self:flex-start}
+/* A strip under the group header for the "All" tab's own switch. */
+.tp-group-tools{display:flex;justify-content:flex-end;padding:6px 14px 0}
+.tp-inline-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:pointer;user-select:none}
+.tp-inline-toggle:hover{color:var(--dsw-alias-label-primary)}
 .tp-empty{padding:26px 16px;text-align:center;color:var(--dsw-alias-label-secondary);font-size:13px}
 .tp-empty strong{display:block;margin-bottom:4px;color:var(--dsw-alias-label-primary);font-weight:500}
 .tp-muted{color:var(--dsw-alias-label-secondary)}
