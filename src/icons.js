@@ -154,3 +154,13 @@ function FolderIcon({ size = 13 }) {
   return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
     h('path', { d: 'M2.4 4.6a1 1 0 0 1 1-1h2.5l1.4 1.6h5.3a1 1 0 0 1 1 1v6.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V4.6z', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }));
 }
+
+/**
+ * A plain cross: "clear". Smaller and thinner than `CloseIcon`, because it sits
+ * on the corner of a 24px control and a full-weight X there reads as a close
+ * button for the whole row.
+ */
+function CrossIcon({ size = 10 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 12 12', 'aria-hidden': true },
+    h('path', { d: 'M3 3l6 6M9 3l-6 6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }));
+}

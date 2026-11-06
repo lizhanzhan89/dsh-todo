@@ -24,8 +24,6 @@ function TodoPage(props) {
   const [drafts, setDrafts] = React.useState({});
   // Per-group selected tab: 'active' | 'done' | 'entries'.
   const [tabs, setTabs] = React.useState({});
-  // Per-group deadline drafts for the add field, same keying as the text drafts.
-  const [dueDrafts, setDueDrafts] = React.useState({});
   const [projectDraft, setProjectDraft] = React.useState('');
   const [creatingProject, setCreatingProject] = React.useState(false);
   // Left quick-jump nav: which group is highlighted, plus the scroll container
@@ -45,8 +43,9 @@ function TodoPage(props) {
   // Drag-and-drop project reordering inside the quick-jump nav.
   const [dragId, setDragId] = React.useState(null);
   const [dropId, setDropId] = React.useState(null);
-  // True while a project row is hovering the nav's delete zone.
+  // True while a project row is hovering the nav's delete or archive zone.
   const [dragOverTrash, setDragOverTrash] = React.useState(false);
+  const [dragOverArchive, setDragOverArchive] = React.useState(false);
   // Drag-and-drop item reordering (todos and notes) inside a group tab.
   const [itemDragId, setItemDragId] = React.useState(null);
   const [itemDropId, setItemDropId] = React.useState(null);
@@ -121,9 +120,7 @@ function TodoPage(props) {
   const setDraftFor = (projectId, value) =>
     setDrafts((prev) => ({ ...prev, [groupKey(projectId)]: value }));
   const draftFor = (projectId) => drafts[groupKey(projectId)] || '';
-  const setDraftDueFor = (projectId, value) =>
-    setDueDrafts((prev) => ({ ...prev, [groupKey(projectId)]: value }));
-  const draftDueFor = (projectId) => dueDrafts[groupKey(projectId)] || '';
+
   const tabFor = (projectId) => tabs[groupKey(projectId)] || TAB_ACTIVE;
   const setTabFor = (projectId, value) =>
     setTabs((prev) => ({ ...prev, [groupKey(projectId)]: value }));
@@ -139,13 +136,14 @@ function TodoPage(props) {
   };
 
   // --- adding ---------------------------------------------------------------
+  // Adding never asks for a deadline. A date is a decision about one item, and
+  // it belongs on the row where the item is - a field next to the add button
+  // invites setting a date for a thought that has not been written yet.
   const addItemFor = (projectId, kind) => {
     const text = draftFor(projectId).trim();
     if (!text) return;
-    update((prev) => addItem(prev, projectId, kind, text, draftDueFor(projectId)));
+    update((prev) => addItem(prev, projectId, kind, text));
     setDraftFor(projectId, '');
-    // The deadline belongs to the item that was just added, not to the next one.
-    setDraftDueFor(projectId, '');
   };
   const addTodo = (projectId) => addItemFor(projectId, KIND_TODO);
   const addNote = (projectId) => addItemFor(projectId, KIND_ENTRY);
@@ -418,7 +416,8 @@ function TodoPage(props) {
     t, state, groups, view, activeGroup,
     setView, setQuery, query, includeDone, setIncludeDone, editCols,
     setDragId, setDropId, dragId, dropId, setDragOverTrash, dragOverTrash,
-    dueDrafts, draftDueFor, setDraftDueFor, setDue,
+    setDragOverArchive, dragOverArchive,
+    setDue,
     archived, archiveProject, unarchiveProject,
     creatingProject, setCreatingProject, projectDraft, setProjectDraft,
     editingId, editDraft, setEditDraft,
