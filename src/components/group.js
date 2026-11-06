@@ -25,6 +25,8 @@ function tabIcon(key) {
  */
 function renderGroup(group, api) {
   const { t, state, tabFor, setTabFor, draftFor, setDraftFor, addTodo, addNote, groupAnchor } = api;
+  const draftDueFor = (projectId) => api.draftDueFor(projectId);
+  const addDueTitle = t('dueSet');
   const all = itemsOf(state, group.id);
   const todoItems = all.filter((item) => !isEntry(item));
   const noteItems = all.filter(isEntry);
@@ -126,6 +128,19 @@ function renderGroup(group, api) {
   // The field is a one-row textarea so a multi-line entry can be typed: Enter
   // inserts a newline and Ctrl/Cmd+Enter adds the item, which is what a plain
   // textarea user expects. Shift+Enter is left to the browser.
+  // The deadline field only appears where todos are added; a note has nothing to
+  // finish, so the field is absent rather than disabled.
+  const addDueProps = isEntriesTab
+    ? null
+    : {
+        type: 'date',
+        className: 'tp-due-input tp-add-due' + (draftDueFor(group.id) ? ' has-value' : ''),
+        value: draftDueFor(group.id),
+        title: addDueTitle,
+        'aria-label': addDueTitle,
+        onChange: (event) => api.setDraftDueFor(group.id, event.target.value),
+      };
+
   const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES || isAllTab)
     ? h('div', { className: 'tp-add-inline' },
         h('textarea', {
@@ -142,6 +157,7 @@ function renderGroup(group, api) {
           },
           'aria-label': placeholder,
         }),
+        addDueProps ? h('input', addDueProps) : null,
         h('button', {
           type: 'button',
           className: 'tp-btn tp-btn-primary tp-add-btn',
@@ -167,7 +183,18 @@ function renderGroup(group, api) {
           tabButton(TAB_DONE, t('tabDone'), done.length),
           tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
       h('div', { className: 'tp-group-center' },
-        h('h2', { className: 'tp-group-title' }, group.name)),
+        h('h2', { className: 'tp-group-title' }, group.name),
+        // Archiving is per project: the default group has no id and cannot leave
+        // the board, and a row of buttons belongs to a header that has a name.
+        group.id
+          ? h('button', {
+              type: 'button',
+              className: 'tp-icon-btn tp-archive-btn',
+              title: t('archiveProject'),
+              'aria-label': t('archiveProject'),
+              onClick: () => api.archiveProject(group.id),
+            }, h(ArchiveIcon, { size: 13 }))
+          : null),
       h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
     doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
     h('div', { className: 'tp-group-body' },

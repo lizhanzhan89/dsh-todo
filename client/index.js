@@ -64,7 +64,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-05.7';
+    const BUILD = '2026-11-06.1';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -124,6 +124,27 @@ window.__ModuleLoader__.load({
       dragToReorder: 'Drag to reorder',
       dragToDelete: 'Drag a project here to delete',
       dragToDeleteNamed: 'Release to delete “{name}”',
+      archive: 'Archive',
+      archiveHint: 'Archived projects leave the board. Their items and completion state are kept.',
+      archiveProject: 'Archive this project',
+      unarchive: 'Unarchive',
+      unarchiveHint: 'Put the project back on the board',
+      archiveNothing: 'Nothing archived yet',
+      archiveNothingHint: 'Use the archive button next to a project name to move it here.',
+      archiveEmpty: 'This project has no items',
+      archiveEmptyHint: 'It was already empty when it was archived.',
+      archiveOpenCount: '{count} open',
+      archiveOverdueCount: '{count} overdue',
+      dataFolder: 'Data folder',
+      dataLocation: 'Data file: {dataFile}\nBackups: {backupDir}',
+      dueSet: 'Set a deadline',
+      dueTitle: 'Deadline: {date}',
+      dueToday: 'Today',
+      dueTomorrow: 'Tomorrow',
+      dueInDaysOne: '1 day left',
+      dueOverdueOne: '1 day late',
+      dueInDays: '{count} days left',
+      dueOverdue: '{count} days late',
       trash: 'Recycle bin',
       trashEmpty: 'Recycle bin is empty',
       trashEmptyHint: 'Deleted todos, notes and projects collect here.',
@@ -214,6 +235,27 @@ window.__ModuleLoader__.load({
       dragToReorder: '拖动以排序',
       dragToDelete: '把项目拖到这里删除',
       dragToDeleteNamed: '松开即删除“{name}”',
+      archive: '归档',
+      archiveHint: '归档的项目不显示在看板上，条目和完成状态都保留。',
+      archiveProject: '归档这个项目',
+      unarchive: '取消归档',
+      unarchiveHint: '把项目放回看板',
+      archiveNothing: '还没有归档的项目',
+      archiveNothingHint: '在项目标题旁点归档按钮，项目会移到这里。',
+      archiveEmpty: '这个项目没有条目',
+      archiveEmptyHint: '它在归档时就是空的。',
+      archiveOpenCount: '未完成 {count}',
+      archiveOverdueCount: '逾期 {count}',
+      dataFolder: '数据目录',
+      dataLocation: '数据文件：{dataFile}\n备份目录：{backupDir}',
+      dueSet: '设置截止日期',
+      dueTitle: '截止日期：{date}',
+      dueToday: '今天',
+      dueTomorrow: '明天',
+      dueInDaysOne: '还有 1 天',
+      dueOverdueOne: '逾期 1 天',
+      dueInDays: '{count} 天后',
+      dueOverdue: '逾期 {count} 天',
       trash: '回收站',
       trashEmpty: '回收站是空的',
       trashEmptyHint: '删除的待办、笔记和项目会先放到这里。',
@@ -276,13 +318,34 @@ window.__ModuleLoader__.load({
     /** Coerce whatever came back from disk into the shape the page expects. */
     function normalizeState(parsed) {
       return {
+        // `archived` is a flag on the project itself: an archived project keeps its
+        // items and its position, it just leaves the board for the archive view.
         projects: Array.isArray(parsed && parsed.projects) ? parsed.projects : [],
+        // `due` is a calendar day ("2026-11-06"), kept on the todo beside the text.
         todos: Array.isArray(parsed && parsed.todos) ? parsed.todos : [],
         // The recycle bin: deleted items and projects kept for restoring.
         trash: Array.isArray(parsed && parsed.trash) ? parsed.trash : [],
         // A file written before this flag existed has no value; default to showing
         // finished todos, which is what those versions did.
         includeDone: !(parsed && parsed.includeDone === false),
+      };
+    }
+
+    function emptyMeta() {
+      return { dataDir: '', dataFile: '', backupDir: '' };
+    }
+
+    /**
+     * Where the Host keeps the data. It rides along with the state response; an
+     * older Host answers with just the state, so this is always optional.
+     */
+    function readMeta(data) {
+      const meta = data && data.meta;
+      if (!meta || typeof meta !== 'object') return emptyMeta();
+      return {
+        dataDir: typeof meta.dataDir === 'string' ? meta.dataDir : '',
+        dataFile: typeof meta.dataFile === 'string' ? meta.dataFile : '',
+        backupDir: typeof meta.backupDir === 'string' ? meta.backupDir : '',
       };
     }
 
@@ -294,15 +357,20 @@ window.__ModuleLoader__.load({
       return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
     }
 
-    /** Read the stored state. A missing file or a network error yields empty state. */
+    /**
+     * Read the stored state. A missing file or a network error yields empty state.
+     *
+     * Returns the state with its `meta` already reduced to strings, so the caller
+     * can show the data folder without re-checking the response shape.
+     */
     async function loadState() {
       try {
         const res = await fetch(STATE_URL, { method: 'GET', headers: { accept: 'application/json' } });
-        if (!res.ok) return emptyState();
+        if (!res.ok) return { ...emptyState(), meta: emptyMeta() };
         const data = await res.json();
-        return normalizeState(data);
+        return { ...normalizeState(data), meta: readMeta(data) };
       } catch (e) {
-        return emptyState();
+        return { ...emptyState(), meta: emptyMeta() };
       }
     }
 
@@ -335,7 +403,11 @@ window.__ModuleLoader__.load({
           body: JSON.stringify(state),
         });
         if (!res || !res.ok) return { ok: false, error: 'syncFailed' };
-        return { ok: true };
+        let meta = emptyMeta();
+        try {
+          meta = readMeta(await res.json());
+        } catch (e) { /* an older Host answers with a bare { ok: true } */ }
+        return { ok: true, meta };
       } catch (e) {
         return { ok: false, error: 'syncFailed' };
       }
@@ -741,6 +813,49 @@ window.__ModuleLoader__.load({
     .tp-notice-text{flex:1;min-width:0}
     .tp-notice-close{flex:none}
     .tp-notice.is-error .tp-notice-close:hover{color:var(--dsw-alias-state-error-primary)}
+
+    /* --- deadlines ------------------------------------------------------------
+       The field is a native date input, so it carries the platform's own picker and
+       its own locale formatting. It is hidden by default and only appears once the
+       row is hovered or already has a date: an always-visible date field on every
+       row would read as a column of empty boxes. */
+    .tp-due-input{flex:none;width:26px;height:24px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer;opacity:0;transition:opacity .12s,width .12s,background .12s}
+    .tp-todo:hover .tp-due-input,.tp-due-input:focus-visible,.tp-due-input.has-value{opacity:1}
+    .tp-due-input.has-value{width:auto;min-width:118px;padding:0 6px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l1)}
+    .tp-due-input:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+    .tp-due-input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
+    .tp-due-input::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer}
+    .tp-due-input:hover::-webkit-calendar-picker-indicator{opacity:.9}
+    /* The add field's date picker is always visible: it is part of the input line,
+       and a hidden control there would be a feature nobody finds. */
+    .tp-add-due{opacity:1;width:auto;min-width:104px;padding:0 4px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l2);height:30px;align-self:flex-start}
+
+    /* The badge sits under the text with the finish time. Colour carries urgency:
+       overdue is the error colour, today is the brand accent, the rest stays quiet. */
+    .tp-todo-meta{display:flex;align-items:center;gap:10px;min-height:16px}
+    .tp-todo-meta:empty{display:none}
+    .tp-due{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}
+    .tp-due.is-today{color:var(--dsw-alias-brand-primary);font-weight:500}
+    .tp-due.is-soon{color:var(--dsw-alias-label-primary)}
+    .tp-due.is-overdue{color:var(--dsw-alias-state-error-primary);font-weight:500}
+    .tp-due.is-done{color:var(--dsw-alias-label-secondary);opacity:.7}
+    .tp-due-rel{font-size:11px}
+    .tp-due.is-done .tp-due-date{text-decoration:line-through}
+
+    /* --- archive -------------------------------------------------------------- */
+    .tp-nav-archive{margin-top:2px}
+    .tp-archived-head{padding-top:12px}
+    .tp-archived-counts{display:flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary)}
+    .tp-archived-overdue{color:var(--dsw-alias-state-error-primary)}
+    /* The archived rows keep the board's layout but not its drag affordances. */
+    .tp-row-grip.is-inert{opacity:0;cursor:default}
+    .tp-archived .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
+
+    /* The quiet data-folder line in the footer: one row, one tooltip, no path in
+       sight until it is asked for. */
+    .tp-nav-path{display:flex;align-items:center;gap:5px;margin-top:6px;padding:0 2px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:default}
+    .tp-nav-path svg{flex:none;opacity:.75}
+    .tp-nav-path-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     `;
 
     /* ---------------------------------------------------------------------- */
@@ -874,6 +989,35 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M4.6 14.1v-2.7h2.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }));
     }
 
+    /** A calendar page: the deadline control and the due-date badge. */
+    function CalendarIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('rect', { x: 2.6, y: 3.6, width: 10.8, height: 9.8, rx: 1.6, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 }),
+        h('path', { d: 'M2.6 6.6h10.8M5.6 2.4v2.4M10.4 2.4v2.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }));
+    }
+
+    /** A closed box: "archive". */
+    function ArchiveIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('rect', { x: 2.2, y: 3, width: 11.6, height: 3.4, rx: 1, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 }),
+        h('path', { d: 'M3.4 6.4v6.2a1 1 0 0 0 1 1h7.2a1 1 0 0 0 1-1V6.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+        h('path', { d: 'M6.4 9.4h3.2', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }));
+    }
+
+    /** A box with its lid lifted: "unarchive". */
+    function UnarchiveIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('rect', { x: 2.2, y: 2.2, width: 11.6, height: 3.2, rx: 1, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 }),
+        h('path', { d: 'M3.4 5.6v6.6a1 1 0 0 0 1 1h7.2a1 1 0 0 0 1-1V5.6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+        h('path', { d: 'M8 12v-3.4M6.6 10l1.4-1.4 1.4 1.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
+    /** A folder: the data-location line in the footer. */
+    function FolderIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('path', { d: 'M2.4 4.6a1 1 0 0 1 1-1h2.5l1.4 1.6h5.3a1 1 0 0 1 1 1v6.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V4.6z', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }));
+    }
+
     /* ---------------------------------------------------------------------- */
     /* src/format.js                                                          */
     /* ---------------------------------------------------------------------- */
@@ -899,6 +1043,57 @@ window.__ModuleLoader__.load({
     /** Current time as the ISO string written into `completedAt` / `deletedAt`. */
     function now() {
       return new Date().toISOString();
+    }
+
+    /* --- deadlines ------------------------------------------------------------ */
+
+    /**
+     * A calendar day as a local `YYYY-MM-DD` string.
+     *
+     * `toISOString()` is deliberately not used: it converts to UTC, so east of
+     * Greenwich an evening date rolls over to the next day and a todo due "today"
+     * would show as due tomorrow.
+     */
+    function dayKey(date) {
+      const d = date || new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    }
+
+    /** Whole days from today to a `YYYY-MM-DD` date; negative when overdue. */
+    function daysUntil(due) {
+      if (!due) return null;
+      const parts = String(due).split('-').map(Number);
+      if (parts.length !== 3 || parts.some(isNaN)) return null;
+      const target = new Date(parts[0], parts[1] - 1, parts[2]);
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      return Math.round((target.getTime() - start.getTime()) / 86400000);
+    }
+
+    /**
+     * How a deadline reads: `overdue` / `today` / `soon` (within a week) / `later`.
+     * The row styles by this class, so the urgency is not only in the text.
+     */
+    function dueState(due) {
+      const days = daysUntil(due);
+      if (days === null) return null;
+      if (days < 0) return 'overdue';
+      if (days === 0) return 'today';
+      return days <= 7 ? 'soon' : 'later';
+    }
+
+    /**
+     * A deadline as the row shows it: the day, with the year only when it is not
+     * this one. `11-06` today, `2027-03-01` for a date far enough out that leaving
+     * the year off would be ambiguous.
+     */
+    function shortDate(due) {
+      if (!due) return '';
+      const parts = String(due).split('-');
+      if (parts.length !== 3) return String(due);
+      const sameYear = Number(parts[0]) === new Date().getFullYear();
+      return sameYear ? parts[1] + '-' + parts[2] : due;
     }
 
     /* ---------------------------------------------------------------------- */
@@ -933,7 +1128,7 @@ window.__ModuleLoader__.load({
       state.todos.filter((item) => projectIdOf(item) === (projectId || null));
 
     /** Append a new todo or note to the group. */
-    function addItem(state, projectId, kind, text) {
+    function addItem(state, projectId, kind, text, due) {
       const item = {
         id: uid(),
         text,
@@ -942,8 +1137,60 @@ window.__ModuleLoader__.load({
         completedAt: null,
         projectId: projectId || null,
       };
+      // Only a todo carries a deadline; a note has nothing to finish.
+      if (due && kind === KIND_TODO) item.due = due;
       return { ...state, todos: state.todos.concat(item) };
     }
+
+    /**
+     * Set or clear one todo's deadline.
+     *
+     * `due` is a calendar day (`YYYY-MM-DD`), not an instant: "due Friday" means
+     * that day in the reader's own time zone, and storing a timestamp would move
+     * the date when the machine changes zone.
+     */
+    function setItemDue(state, id, due) {
+      return {
+        ...state,
+        todos: state.todos.map((todo) => {
+          if (todo.id !== id) return todo;
+          const next = { ...todo };
+          if (due) next.due = due;
+          else delete next.due;
+          return next;
+        }),
+      };
+    }
+
+    /** A project is archived when it carries the flag; the default group never is. */
+    const isArchived = (project) => Boolean(project && project.archived);
+
+    /**
+     * Archive a project, or bring it back.
+     *
+     * Archiving is deliberately not deletion: the project keeps its id, its place in
+     * the order and every item it holds, so unarchiving puts it back exactly where
+     * it was. Only the board and the quick-jump list hide it.
+     */
+    function setProjectArchived(state, projectId, archived) {
+      if (!projectId) return state;
+      return {
+        ...state,
+        projects: state.projects.map((project) => {
+          if (project.id !== projectId) return project;
+          const next = { ...project };
+          if (archived) next.archived = true;
+          else delete next.archived;
+          return next;
+        }),
+      };
+    }
+
+    /** Projects shown on the board and in the quick-jump list. */
+    const liveProjects = (state) => state.projects.filter((project) => !isArchived(project));
+
+    /** Projects that left the board, keeping their order. */
+    const archivedProjects = (state) => state.projects.filter(isArchived);
 
     /** Check a todo off (stamping `completedAt`) or reopen it (clearing it). */
     function toggleTodo(state, id) {
@@ -1100,10 +1347,14 @@ window.__ModuleLoader__.load({
       return { ...state, projects };
     }
 
-    /** Groups for the board and the nav: the fixed default group first. */
+    /**
+     * Groups for the board and the nav: the fixed default group first, then the
+     * projects that are not archived. The default group cannot be archived - it is
+     * not a project, it is the slot for everything without one.
+     */
     function groupList(state, defaultName) {
       return [{ id: null, name: defaultName, hint: '' }]
-        .concat(state.projects.map((p) => ({ id: p.id, name: p.name })));
+        .concat(liveProjects(state).map((p) => ({ id: p.id, name: p.name })));
     }
 
     /* ---------------------------------------------------------------------- */
@@ -1209,15 +1460,74 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * The deadline badge.
+     *
+     * A finished todo keeps its deadline but stops shouting: the date is shown
+     * plainly, without the overdue colour, because "late" is no longer actionable.
+     * Otherwise the badge carries a state class (`overdue` / `today` / `soon`) that
+     * colours it, so urgency is not only in the text.
+     */
+    function dueBadge(todo, api) {
+      if (!todo.due) return null;
+      const state = todo.done ? 'done' : dueState(todo.due);
+      const days = daysUntil(todo.due);
+      // "1 days left" is not English; the singular gets its own words, and tomorrow
+      // reads better as a word than as "in 1 day".
+      const relative = todo.done || days === null
+        ? ''
+        : days === 0
+          ? api.t('dueToday')
+          : days === 1
+            ? api.t('dueTomorrow')
+            : days < 0
+              ? api.t(-days === 1 ? 'dueOverdueOne' : 'dueOverdue').replace('{count}', String(-days))
+              : api.t('dueInDays').replace('{count}', String(days));
+      return h('span', {
+        className: 'tp-due is-' + state,
+        title: api.t('dueTitle').replace('{date}', todo.due),
+      },
+        h(CalendarIcon, { size: 11 }),
+        h('span', { className: 'tp-due-date' }, shortDate(todo.due)),
+        relative ? h('span', { className: 'tp-due-rel' }, relative) : null);
+    }
+
+    /**
+     * The deadline control: a native date field.
+     *
+     * A `<input type="date">` is the whole date picker for free - keyboard entry,
+     * the platform's own calendar popup, locale-correct display - and its value is
+     * already `YYYY-MM-DD`, which is exactly what is stored.
+     */
+    function dueControl(todo, api) {
+      if (todo.done) return null;
+      return h('input', {
+        type: 'date',
+        className: 'tp-due-input' + (todo.due ? ' has-value' : ''),
+        value: todo.due || '',
+        title: api.t('dueSet'),
+        'aria-label': api.t('dueSet'),
+        onChange: (event) => api.setDue(todo.id, event.target.value || ''),
+        // The row is a drop target; a click in the date field is not a drag.
+        onMouseDown: (event) => event.stopPropagation(),
+        onClick: (event) => event.stopPropagation(),
+      });
+    }
+
+    /**
      * The drag grip. It is the only draggable element of a row, so the text can be
      * selected and the buttons clicked without starting a drag.
+     *
+     * `options.readOnlyDrag` keeps the grip's column (so archived rows line up with
+     * the board's) but drops the drag handlers: dropping into an archive list would
+     * be a reorder across views, which no transition accepts.
      */
-    function renderGrip(item, api) {
+    function renderGrip(item, api, options) {
+      const inert = !!(options && options.readOnlyDrag);
       return h('span', {
-        className: 'tp-row-grip',
-        title: api.t('dragToReorder'),
+        className: 'tp-row-grip' + (inert ? ' is-inert' : ''),
+        title: inert ? undefined : api.t('dragToReorder'),
         'aria-hidden': true,
-        ...api.gripDragProps(item),
+        ...(inert ? {} : api.gripDragProps(item)),
       }, '⠿');
     }
 
@@ -1230,7 +1540,7 @@ window.__ModuleLoader__.load({
         style: rowTint(false, false),
         ...api.itemDragProps(item),
       },
-        renderGrip(item, api),
+        renderGrip(item, api, options),
         withKind ? h(KindBadge, { kind: KIND_ENTRY, label: api.t('kindNote'), size: 14 }) : null,
         h('div', { className: 'tp-todo-main' },
           editableText(item, api)),
@@ -1260,7 +1570,7 @@ window.__ModuleLoader__.load({
         style: rowTint(true, todo.done),
         ...api.itemDragProps(todo),
       },
-        renderGrip(todo, api),
+        renderGrip(todo, api, options),
         withKind ? h(KindBadge, { kind: KIND_TODO, label: t('kindTodo'), size: 14 }) : null,
         h('button', {
           type: 'button',
@@ -1271,9 +1581,12 @@ window.__ModuleLoader__.load({
         }, todo.done ? h(CheckIcon, { size: 12 }) : null),
         h('div', { className: 'tp-todo-main' },
           editableText(todo, api),
-          todo.done && todo.completedAt
-            ? h('span', { className: 'tp-todo-time' }, t('completedAt').replace('{time}', formatTime(todo.completedAt)))
-            : null),
+          h('div', { className: 'tp-todo-meta' },
+            dueBadge(todo, api),
+            todo.done && todo.completedAt
+              ? h('span', { className: 'tp-todo-time' }, t('completedAt').replace('{time}', formatTime(todo.completedAt)))
+              : null)),
+        dueControl(todo, api),
         canEdit(todo) ? h('button', {
           type: 'button',
           className: 'tp-icon-btn tp-edit-btn',
@@ -1331,6 +1644,8 @@ window.__ModuleLoader__.load({
      */
     function renderGroup(group, api) {
       const { t, state, tabFor, setTabFor, draftFor, setDraftFor, addTodo, addNote, groupAnchor } = api;
+      const draftDueFor = (projectId) => api.draftDueFor(projectId);
+      const addDueTitle = t('dueSet');
       const all = itemsOf(state, group.id);
       const todoItems = all.filter((item) => !isEntry(item));
       const noteItems = all.filter(isEntry);
@@ -1432,6 +1747,19 @@ window.__ModuleLoader__.load({
       // The field is a one-row textarea so a multi-line entry can be typed: Enter
       // inserts a newline and Ctrl/Cmd+Enter adds the item, which is what a plain
       // textarea user expects. Shift+Enter is left to the browser.
+      // The deadline field only appears where todos are added; a note has nothing to
+      // finish, so the field is absent rather than disabled.
+      const addDueProps = isEntriesTab
+        ? null
+        : {
+            type: 'date',
+            className: 'tp-due-input tp-add-due' + (draftDueFor(group.id) ? ' has-value' : ''),
+            value: draftDueFor(group.id),
+            title: addDueTitle,
+            'aria-label': addDueTitle,
+            onChange: (event) => api.setDraftDueFor(group.id, event.target.value),
+          };
+
       const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES || isAllTab)
         ? h('div', { className: 'tp-add-inline' },
             h('textarea', {
@@ -1448,6 +1776,7 @@ window.__ModuleLoader__.load({
               },
               'aria-label': placeholder,
             }),
+            addDueProps ? h('input', addDueProps) : null,
             h('button', {
               type: 'button',
               className: 'tp-btn tp-btn-primary tp-add-btn',
@@ -1473,7 +1802,18 @@ window.__ModuleLoader__.load({
               tabButton(TAB_DONE, t('tabDone'), done.length),
               tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
           h('div', { className: 'tp-group-center' },
-            h('h2', { className: 'tp-group-title' }, group.name)),
+            h('h2', { className: 'tp-group-title' }, group.name),
+            // Archiving is per project: the default group has no id and cannot leave
+            // the board, and a row of buttons belongs to a header that has a name.
+            group.id
+              ? h('button', {
+                  type: 'button',
+                  className: 'tp-icon-btn tp-archive-btn',
+                  title: t('archiveProject'),
+                  'aria-label': t('archiveProject'),
+                  onClick: () => api.archiveProject(group.id),
+                }, h(ArchiveIcon, { size: 13 }))
+              : null),
           h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
         doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
         h('div', { className: 'tp-group-body' },
@@ -1674,14 +2014,27 @@ window.__ModuleLoader__.load({
         }, h(UploadIcon, { size: 13 }), t('import'), fileInput));
     }
 
-    /** The whole left column: heading, group rows, recycle bin, delete zone, footer. */
+    /** The whole left column: heading, group rows, recycle bin, archive, delete zone, footer. */
     function renderNav(api) {
-      const { t, state, view, setView, activeGroup, dragId, dropId, groups } = api;
+      const { t, state, view, setView, activeGroup, dragId, dropId, groups, archived } = api;
 
       const rows = groups.map((group) => {
-        const open = itemsOf(state, group.id).filter((item) => !item.done).length;
+        // The badge counts what is left to do, so a group reads as a workload at a
+        // glance. Notes are not work, so they are not counted: an "open count" that
+        // included them would never reach zero on a group full of reminders.
+        const open = itemsOf(state, group.id).filter((item) => !isEntry(item) && !item.done).length;
         return navButton(group, Boolean(group.id), open, api);
       });
+
+      const archiveRow = h('button', {
+        key: '__archive__',
+        type: 'button',
+        className: 'tp-nav-item tp-nav-archive' + (view === 'archive' ? ' is-active' : ''),
+        onClick: () => setView('archive'),
+      },
+        h('span', { className: 'tp-nav-trash-icon', 'aria-hidden': true }, h(ArchiveIcon, { size: 13 })),
+        h('span', { className: 'tp-nav-name' }, t('archive')),
+        archived.length ? h('span', { className: 'tp-nav-count' }, String(archived.length)) : null);
 
       return h('nav', { className: 'tp-nav', 'aria-label': t('navTitle') },
         h('div', { className: 'tp-nav-head' }, t('navTitle')),
@@ -1695,11 +2048,35 @@ window.__ModuleLoader__.load({
           },
             h('span', { className: 'tp-nav-trash-icon', 'aria-hidden': true }, h(TrashIcon, { size: 13 })),
             h('span', { className: 'tp-nav-name' }, t('trash')),
-            state.trash.length ? h('span', { className: 'tp-nav-count' }, String(state.trash.length)) : null)),
+            state.trash.length ? h('span', { className: 'tp-nav-count' }, String(state.trash.length)) : null),
+          archiveRow),
         trashZone(api),
         h('div', { className: 'tp-nav-foot' },
           dataControls(api),
-          createProjectControl(api)));
+          createProjectControl(api),
+          dataLocation(api)));
+    }
+
+    /**
+     * Where the data lives, as a tooltip on one quiet line.
+     *
+     * The path is only known after the first load (the Host reports it with the
+     * state), so this renders nothing until then. It is a tooltip rather than a
+     * visible path because a folder path is reference information, not something to
+     * read every day; the dot is only there to say the panel knows.
+     */
+    function dataLocation(api) {
+      const { t, state } = api;
+      const meta = (state && state.meta) || {};
+      if (!meta.dataDir) return null;
+      // Substituted by hand: `t` only replaces the variables it is handed, so the
+      // folder paths have to be filled in here rather than passed through it.
+      const title = t('dataLocation')
+        .split('{dataFile}').join(meta.dataFile || meta.dataDir)
+        .split('{backupDir}').join(meta.backupDir || '');
+      return h('div', { className: 'tp-nav-path', title },
+        h(FolderIcon, { size: 11 }),
+        h('span', { className: 'tp-nav-path-text' }, t('dataFolder')));
     }
 
     /* ---------------------------------------------------------------------- */
@@ -1818,6 +2195,103 @@ window.__ModuleLoader__.load({
     }
 
     /* ---------------------------------------------------------------------- */
+    /* src/components/archive.js                                              */
+    /* ---------------------------------------------------------------------- */
+    /**
+     * The archive view: projects that left the board, with the items they still
+     * hold and a button that puts each one back.
+     *
+     * Archiving is not deletion, so nothing here is destructive: the only two
+     * actions are "restore to the board" and "look inside", and the items keep their
+     * ids, their order and their deadlines while they are parked here.
+     */
+
+    /**
+     * How many of a project's items are still open, and how many are overdue. Both
+     * numbers are shown per row so an archived project is not a black box: a project
+     * parked with three late items is not really "done".
+     */
+    function archiveCounts(project) {
+      const open = project.items.filter((item) => !isEntry(item) && !item.done);
+      const overdue = open.filter((item) => {
+        const state = dueState(item.due);
+        return state === 'overdue';
+      });
+      return { open: open.length, overdue: overdue.length };
+    }
+
+    /**
+     * One archived project: name, counts, and its items.
+     *
+     * The items are listed in full with the board's own row renderer. A user who
+     * opens the archive is asking "what is in there", and a row that is not rendered
+     * cannot answer that. Reordering is off here because drop targets belong to the
+     * board: the grip is still drawn, so the rows line up with the board's, but it
+     * carries no drag handlers.
+     *
+     * @param {object} project { id, name, items }
+     * @param {object} api     page state and transitions
+     */
+    function archivedRow(project, api) {
+      const { t } = api;
+      const counts = archiveCounts(project);
+      return h('section', { key: project.id, className: 'tp-group tp-archived' },
+        h('div', { className: 'tp-group-head tp-archived-head' },
+          h('div', { className: 'tp-group-side tp-group-side-left' },
+            h('span', { className: 'tp-archived-counts' },
+              t('archiveOpenCount').replace('{count}', String(counts.open)),
+              counts.overdue
+                ? h('span', { className: 'tp-archived-overdue' }, t('archiveOverdueCount').replace('{count}', String(counts.overdue)))
+                : null)),
+          h('div', { className: 'tp-group-center' },
+            h('h2', { className: 'tp-group-title' }, project.name)),
+          h('div', { className: 'tp-group-side tp-group-side-right' },
+            h('button', {
+              type: 'button',
+              className: 'tp-btn tp-btn-sm',
+              title: t('unarchiveHint'),
+              onClick: () => api.unarchiveProject(project.id),
+            }, h(UnarchiveIcon, { size: 13 }), t('unarchive')))),
+        project.items.length
+          ? h('div', { className: 'tp-group-body' },
+              h('ul', { className: 'tp-todos is-mixed' },
+                project.items.map((item) => renderRow(item, api, { withKind: true, readOnlyDrag: true }))))
+          : h('div', { className: 'tp-empty' }, h('strong', null, t('archiveEmpty')), t('archiveEmptyHint')));
+    }
+
+    /**
+     * The whole archive page.
+     *
+     * @param {object} api { t, state, setView, archived }
+     */
+    function renderArchive(api) {
+      const { t, setView, archived } = api;
+
+      const groups = archived.map((project) => archivedRow({
+        id: project.id,
+        name: project.name,
+        items: itemsOf(api.state, project.id),
+      }, api));
+
+      return h('div', { className: 'tp-content' },
+        h('header', { className: 'tp-head tp-head-row' },
+          h('div', null,
+            h('h1', null, t('archive')),
+            h('p', null, t('archiveHint'))),
+          h('div', { className: 'tp-head-actions' },
+            h('button', {
+              type: 'button',
+              className: 'tp-btn',
+              onClick: () => setView('board'),
+            }, t('back')))),
+        archived.length === 0
+          ? h('div', { className: 'tp-empty' },
+              h('strong', null, t('archiveNothing')),
+              t('archiveNothingHint'))
+          : groups);
+    }
+
+    /* ---------------------------------------------------------------------- */
     /* src/page.js                                                            */
     /* ---------------------------------------------------------------------- */
     /**
@@ -1846,6 +2320,8 @@ window.__ModuleLoader__.load({
       const [drafts, setDrafts] = React.useState({});
       // Per-group selected tab: 'active' | 'done' | 'entries'.
       const [tabs, setTabs] = React.useState({});
+      // Per-group deadline drafts for the add field, same keying as the text drafts.
+      const [dueDrafts, setDueDrafts] = React.useState({});
       const [projectDraft, setProjectDraft] = React.useState('');
       const [creatingProject, setCreatingProject] = React.useState(false);
       // Left quick-jump nav: which group is highlighted, plus the scroll container
@@ -1894,7 +2370,10 @@ window.__ModuleLoader__.load({
       // Persist to the Host JSON file on every change after the initial load.
       React.useEffect(() => {
         if (!loadedRef.current) return;
-        saveState(state);
+        // `meta` came from the Host and is not part of the record; posting it back
+        // would put a copy of the paths into the data file.
+        const { meta, ...record } = state;
+        saveState(record);
       }, [state]);
 
       const update = (fn) => setState((prev) => fn(prev));
@@ -1938,6 +2417,9 @@ window.__ModuleLoader__.load({
       const setDraftFor = (projectId, value) =>
         setDrafts((prev) => ({ ...prev, [groupKey(projectId)]: value }));
       const draftFor = (projectId) => drafts[groupKey(projectId)] || '';
+      const setDraftDueFor = (projectId, value) =>
+        setDueDrafts((prev) => ({ ...prev, [groupKey(projectId)]: value }));
+      const draftDueFor = (projectId) => dueDrafts[groupKey(projectId)] || '';
       const tabFor = (projectId) => tabs[groupKey(projectId)] || TAB_ACTIVE;
       const setTabFor = (projectId, value) =>
         setTabs((prev) => ({ ...prev, [groupKey(projectId)]: value }));
@@ -1956,8 +2438,10 @@ window.__ModuleLoader__.load({
       const addItemFor = (projectId, kind) => {
         const text = draftFor(projectId).trim();
         if (!text) return;
-        update((prev) => addItem(prev, projectId, kind, text));
+        update((prev) => addItem(prev, projectId, kind, text, draftDueFor(projectId)));
         setDraftFor(projectId, '');
+        // The deadline belongs to the item that was just added, not to the next one.
+        setDraftDueFor(projectId, '');
       };
       const addTodo = (projectId) => addItemFor(projectId, KIND_TODO);
       const addNote = (projectId) => addItemFor(projectId, KIND_ENTRY);
@@ -2066,8 +2550,10 @@ window.__ModuleLoader__.load({
               setNotice({ kind: 'error', text: t(parsed.error) });
               return;
             }
+            // Keep the loaded `meta` on the incoming record: it describes where the
+            // data lives, not what is in it.
             const merged = mergeState(state, parsed.state);
-            update(() => merged.state);
+            update((prev) => ({ ...merged.state, meta: prev.meta }));
             setNotice({ kind: 'ok', text: t('importDone', merged.counts) });
           } catch (error) {
             setNotice({ kind: 'error', text: t('importFailed', { error: String(error && error.message || error) }) });
@@ -2093,16 +2579,32 @@ window.__ModuleLoader__.load({
           items: state.todos.length,
           trash: state.trash.length,
         };
-        syncState(state)
+        const { meta, ...record } = state;
+        syncState(record)
           .then((result) => {
-            if (result.ok) setNotice({ kind: 'ok', text: t('syncDone', counts) });
-            else setNotice({ kind: 'error', text: t(result.error || 'syncFailed') });
+            if (result.ok) {
+              // The Host answers with the folder it wrote to; adopt it so the footer
+              // line stays correct even if the data dir was changed in the config.
+              if (result.meta && result.meta.dataDir) setState((prev) => ({ ...prev, meta: result.meta }));
+              setNotice({ kind: 'ok', text: t('syncDone', counts) });
+            } else {
+              setNotice({ kind: 'error', text: t(result.error || 'syncFailed') });
+            }
           })
           .finally(() => setSyncing(false));
       };
 
+      // --- archiving ------------------------------------------------------------
+      // Archiving moves a project off the board without touching its items: the
+      // project keeps its id and its place in `projects`, so unarchiving restores
+      // both the group and everything in it.
+      const archiveProject = (projectId) => update((prev) => setProjectArchived(prev, projectId, true));
+      const unarchiveProject = (projectId) => update((prev) => setProjectArchived(prev, projectId, false));
+      const setDue = (id, due) => update((prev) => setItemDue(prev, id, due));
+
       // --- derived values -------------------------------------------------------
       const groups = groupList(state, t('noProject'));
+      const archived = archivedProjects(state);
       // The flag decides whether finished todos appear in the combined "All" tab
       // and in search results. It is read straight from the state, so the file is
       // the single source of truth and the toggle needs no extra sync.
@@ -2212,6 +2714,8 @@ window.__ModuleLoader__.load({
         t, state, groups, view, activeGroup,
         setView, setQuery, query, includeDone, setIncludeDone, editCols,
         setDragId, setDropId, dragId, dropId, setDragOverTrash, dragOverTrash,
+        dueDrafts, draftDueFor, setDraftDueFor, setDue,
+        archived, archiveProject, unarchiveProject,
         creatingProject, setCreatingProject, projectDraft, setProjectDraft,
         editingId, editDraft, setEditDraft,
         searching, matches, visibleInSearch,
@@ -2245,8 +2749,9 @@ window.__ModuleLoader__.load({
               t('searchNothingHint'))
           : groups.map((group) => renderGroup(group, api)));
 
-      // The recycle bin replaces the board; search filters the board in place.
-      const content = view === 'trash' ? renderTrash(api) : board;
+      // The recycle bin and the archive each replace the board; search filters the
+      // board in place.
+      const content = view === 'trash' ? renderTrash(api) : view === 'archive' ? renderArchive(api) : board;
 
       // A short-lived status line for export and import. It sits over the pane so
       // the layout does not jump, and carries its own close button.

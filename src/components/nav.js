@@ -187,14 +187,27 @@ function dataControls(api) {
     }, h(UploadIcon, { size: 13 }), t('import'), fileInput));
 }
 
-/** The whole left column: heading, group rows, recycle bin, delete zone, footer. */
+/** The whole left column: heading, group rows, recycle bin, archive, delete zone, footer. */
 function renderNav(api) {
-  const { t, state, view, setView, activeGroup, dragId, dropId, groups } = api;
+  const { t, state, view, setView, activeGroup, dragId, dropId, groups, archived } = api;
 
   const rows = groups.map((group) => {
-    const open = itemsOf(state, group.id).filter((item) => !item.done).length;
+    // The badge counts what is left to do, so a group reads as a workload at a
+    // glance. Notes are not work, so they are not counted: an "open count" that
+    // included them would never reach zero on a group full of reminders.
+    const open = itemsOf(state, group.id).filter((item) => !isEntry(item) && !item.done).length;
     return navButton(group, Boolean(group.id), open, api);
   });
+
+  const archiveRow = h('button', {
+    key: '__archive__',
+    type: 'button',
+    className: 'tp-nav-item tp-nav-archive' + (view === 'archive' ? ' is-active' : ''),
+    onClick: () => setView('archive'),
+  },
+    h('span', { className: 'tp-nav-trash-icon', 'aria-hidden': true }, h(ArchiveIcon, { size: 13 })),
+    h('span', { className: 'tp-nav-name' }, t('archive')),
+    archived.length ? h('span', { className: 'tp-nav-count' }, String(archived.length)) : null);
 
   return h('nav', { className: 'tp-nav', 'aria-label': t('navTitle') },
     h('div', { className: 'tp-nav-head' }, t('navTitle')),
@@ -208,9 +221,33 @@ function renderNav(api) {
       },
         h('span', { className: 'tp-nav-trash-icon', 'aria-hidden': true }, h(TrashIcon, { size: 13 })),
         h('span', { className: 'tp-nav-name' }, t('trash')),
-        state.trash.length ? h('span', { className: 'tp-nav-count' }, String(state.trash.length)) : null)),
+        state.trash.length ? h('span', { className: 'tp-nav-count' }, String(state.trash.length)) : null),
+      archiveRow),
     trashZone(api),
     h('div', { className: 'tp-nav-foot' },
       dataControls(api),
-      createProjectControl(api)));
+      createProjectControl(api),
+      dataLocation(api)));
+}
+
+/**
+ * Where the data lives, as a tooltip on one quiet line.
+ *
+ * The path is only known after the first load (the Host reports it with the
+ * state), so this renders nothing until then. It is a tooltip rather than a
+ * visible path because a folder path is reference information, not something to
+ * read every day; the dot is only there to say the panel knows.
+ */
+function dataLocation(api) {
+  const { t, state } = api;
+  const meta = (state && state.meta) || {};
+  if (!meta.dataDir) return null;
+  // Substituted by hand: `t` only replaces the variables it is handed, so the
+  // folder paths have to be filled in here rather than passed through it.
+  const title = t('dataLocation')
+    .split('{dataFile}').join(meta.dataFile || meta.dataDir)
+    .split('{backupDir}').join(meta.backupDir || '');
+  return h('div', { className: 'tp-nav-path', title },
+    h(FolderIcon, { size: 11 }),
+    h('span', { className: 'tp-nav-path-text' }, t('dataFolder')));
 }

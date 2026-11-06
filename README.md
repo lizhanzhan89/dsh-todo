@@ -7,12 +7,15 @@ Harness 侧边栏里的事项面板，待办和笔记放在一起，按项目分
 删掉它整个分组连同条目一起进回收站。
 
 数据存成一个 JSON 文件，放在你自己的文稿目录里，不联网、不要账号、没有同步服务器。
-备份就是一个文件，拷走、放进 Git、丢进网盘都行。
+每天自动留一份快照（保留 7 天），整个文件夹拷走、放进 Git、丢进网盘都行。
 
 <!-- 项目描述到此结束；下面是使用和开发文档。 -->
 
 ## 特性
 
+- **截止日期**：待办可以设一个到期日，逾期和今天各自高亮，一眼看出该先做哪件
+- **项目归档**：做完的项目收起来而不是删掉，条目和完成状态都留着，随时放回看板
+- **每日备份**：每天自动留一份快照，保留 7 天，写坏了能退回去
 - **多行条目**：`Enter` 换行，`Ctrl/Cmd+Enter` 保存；列表里完整显示，编辑框最多三行
 - **就地编辑**：双击文字或点铅笔，不用弹窗
 - **拖动排序**：项目拖导航行，条目拖行首的握把；「全部」里可跨类型混排
@@ -31,39 +34,61 @@ plugin_manager: install_bundle  target=/绝对路径/dsh-todo
 
 - **插件包名**：`@local/dsh-todo`
 - **侧边栏 id**：`todos`（主面板 key 相同）
-- **数据文件**：`~/Documents/dsh-todo.json`（macOS 中文系统即 `~/文稿/dsh-todo.json`）
+- **数据目录**：`~/Documents/dsh-todo/`（macOS 中文系统即 `~/文稿/dsh-todo/`）
 - **路由**：`GET/POST /api/dsh-todo`
 
 > 需要 Harness 自带 `webServer` 和 `connection` 服务。数据文件走和页面相同的 cookie 鉴权。
 
 ---
 
-## 数据文件在哪
+## 数据存在哪
 
 ```
-~/Documents/dsh-todo.json
+~/Documents/dsh-todo/
+├── dsh-todo.json                      # 当前数据
+└── backups/
+    ├── dsh-todo-2026-11-06.json       # 每日快照，最多 7 份
+    └── dsh-todo-2026-11-05.json
 ```
 
 放在文稿目录，不放在工作区：工作区是随时会被清空、克隆、切换的地方，
-而待办是个人数据，得活过这些操作。
+而待办是个人数据，得活过这些操作。数据和备份放在同一个文件夹里，
+拷走这个目录就是完整迁移。
 
-想换位置（比如放进网盘同步目录），在 `cordis.patch.yml` 里给这一行加 `fileName`：
+想换位置（比如放进网盘同步目录），在 `cordis.patch.yml` 里给这一行加 `dataDir`：
 
 ```yaml
 - id: dsh-todo
   name: '@local/dsh-todo'
   config:
-    fileName: /Users/me/OneDrive/todo.json   # 绝对路径，原样使用
+    dataDir: /Users/me/OneDrive/dsh-todo   # 绝对路径原样使用，相对路径按用户主目录解析
+    # fileName: todo.json                  # 可选：换数据文件名
 ```
 
-相对路径按文稿目录解析，不是工作区。这是普通的运行时读取，不是 Cordis 的 `Config` schema
+这是普通的运行时读取，不是 Cordis 的 `Config` schema
 ——插件没有声明 `Config`，所以多余的键不会被校验或拒绝。
+
+### 每日备份
+
+**每次写入前**，如果当天还没有快照，Host 会把**上一份**数据文件复制成
+`backups/dsh-todo-YYYY-MM-DD.json`，然后按日期保留最新 **7 份**，更早的删掉。
+所以备份里存的是"这一天动手之前的状态"，而不是动手之后——写坏了正好回滚到这里。
+
+- 一天最多一份：下午改十次不会挤掉十天的历史
+- 只在真正写入时触发：Host 空转不产生快照
+- 只清理自己写的文件：`backups/` 里你手动放的别的东西不会被删
+- 备份失败不会阻塞保存：先保你的编辑，再记一条警告到 Host 日志
+
+想恢复某一天：把它复制回 `dsh-todo.json`（先关掉面板，或者先在面板里导出留底），刷新即可。
 
 文件本身是纯文本，可以直接看、直接改、直接放进版本控制：
 
 ```jsonc
 {
-  "projects": [{ "id": "p1", "name": "工作" }],
+  "projects": [
+    { "id": "p1", "name": "工作" },
+    { "id": "p0", "name": "去年的项目", "archived": true }   // 归档的项目
+  ],
   "todos": [
     {
       "id": "a1",
@@ -71,7 +96,8 @@ plugin_manager: install_bundle  target=/绝对路径/dsh-todo
       "kind": "todo",          // "todo" | "entry"（entry = 笔记）
       "done": false,
       "completedAt": null,     // ISO 时间，完成时写入，重新打开时清空
-      "projectId": "p1"        // null = 默认组
+      "projectId": "p1",       // null = 默认组
+      "due": "2026-11-20"      // 截止日期，YYYY-MM-DD；没有就不写这个键
     }
   ],
   "trash": [
@@ -101,6 +127,9 @@ plugin_manager: install_bundle  target=/绝对路径/dsh-todo
 | 项目分组 | 「默认」组固定在最前、不可拖动、不可删除；其余项目可增删 |
 | 四个标签页 | 每个组有 `全部` / `未完成` / `已完成` / `笔记`，各带图标；每个组的选中页独立记忆 |
 | 「全部」的顺序 | 笔记在最上，然后是未完成待办，最后是已完成待办 |
+| 截止日期 | 未完成待办可以设一个日期（原生日期选择器）；逾期红、今天蓝、一周内正常字色，完成后变灰划掉 |
+| 归档 | 以项目为单位：项目标题旁的归档按钮，项目离开看板（连同它的条目），进「归档」页可取消归档 |
+| 导航计数 | 快速跳转里每个项目的数字只算**未完成待办**，笔记已完成都不算 |
 | 「全部」的已完成 | 「全部」标签页里有「包含已完成」勾选框，取消后不再列出已完成待办；这个状态存进 JSON，刷新后保持 |
 | 添加 | 添加按钮只显示「+」图标，文字在占位符和提示里；输入框因此更宽 |
 | 待办 | 复选框标记完成，自动记录完成时间；重新打开时清空时间 |
@@ -163,6 +192,9 @@ plugin_manager: install_bundle  target=/绝对路径/dsh-todo
 
 > 想「用备份完全替换」而不是合并：先导出当前内容留底，再在应用里删掉不要的内容，然后导入备份。
 
+> 导出/导入和 `backups/` 里的是两套东西：导出是你手动按的、存在下载目录、想留多久留多久；
+> 每日备份是 Host 自动写的、留在数据目录里、只留 7 天，且从不出现在界面里。
+
 ---
 
 ## 目录结构
@@ -197,7 +229,8 @@ dsh-todo/
         ├── group.js      # 一个项目分组（标签页 + 标题 + 添加框 + 列表）
         ├── nav.js        # 左侧快速导航、删除区、新建项目
         ├── search.js     # 搜索框 + 包含已完成
-        └── trash.js      # 回收站视图
+        ├── trash.js      # 回收站视图
+        └── archive.js    # 归档页：已归档项目与取消归档
 ```
 
 ### 为什么有 `build.mjs`
@@ -223,7 +256,10 @@ node build.mjs --check  # 检查产物是否最新（CI 用）
 - 写入走 `pickState()` 白名单：只有 `projects` / `todos` / `trash` / `includeDone` 会进文件。
   **新增字段时必须同时加到这个函数里**，否则 Client 提交了也会被静默丢弃，刷新后回到默认值——
   这个坑真的踩过：`includeDone` 加了、Client 也 POST 了，白名单没认，于是每次刷新都回到勾选状态。
-- 数据文件路径的默认值来自 `documentsDir()`（`home/Documents`）。**不要**改成工作区：工作区会被清空或切换。
+- 数据目录的默认值来自 `defaultDataDir()`（`~/Documents/dsh-todo`）。**不要**改成工作区：工作区会被清空或切换。
+- `pickState()` 里的 `projects` / `todos` 整体透传，它们的字段（`archived`、`due`）由 Client 决定。
+  但**状态顶层的**新字段必须加到 `pickState()`，否则会被静默丢弃。
+- 备份在写入前生成：`backupToday()` 只在当天还没有快照时复制，`pruneBackups()` 只删自己命名的文件。
 - 路由与页面一样走 `connection.authorizeIndex` 鉴权，用浏览器 cookie 认证。
 - `GET` / `HEAD` 返回状态；`POST` 覆盖写入（400 = 非法 JSON，405 = 其他方法，500 = 内部错误）。
 

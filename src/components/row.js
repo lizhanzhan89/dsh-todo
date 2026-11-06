@@ -98,15 +98,74 @@ function rowTint(isTodo, isDone) {
 }
 
 /**
+ * The deadline badge.
+ *
+ * A finished todo keeps its deadline but stops shouting: the date is shown
+ * plainly, without the overdue colour, because "late" is no longer actionable.
+ * Otherwise the badge carries a state class (`overdue` / `today` / `soon`) that
+ * colours it, so urgency is not only in the text.
+ */
+function dueBadge(todo, api) {
+  if (!todo.due) return null;
+  const state = todo.done ? 'done' : dueState(todo.due);
+  const days = daysUntil(todo.due);
+  // "1 days left" is not English; the singular gets its own words, and tomorrow
+  // reads better as a word than as "in 1 day".
+  const relative = todo.done || days === null
+    ? ''
+    : days === 0
+      ? api.t('dueToday')
+      : days === 1
+        ? api.t('dueTomorrow')
+        : days < 0
+          ? api.t(-days === 1 ? 'dueOverdueOne' : 'dueOverdue').replace('{count}', String(-days))
+          : api.t('dueInDays').replace('{count}', String(days));
+  return h('span', {
+    className: 'tp-due is-' + state,
+    title: api.t('dueTitle').replace('{date}', todo.due),
+  },
+    h(CalendarIcon, { size: 11 }),
+    h('span', { className: 'tp-due-date' }, shortDate(todo.due)),
+    relative ? h('span', { className: 'tp-due-rel' }, relative) : null);
+}
+
+/**
+ * The deadline control: a native date field.
+ *
+ * A `<input type="date">` is the whole date picker for free - keyboard entry,
+ * the platform's own calendar popup, locale-correct display - and its value is
+ * already `YYYY-MM-DD`, which is exactly what is stored.
+ */
+function dueControl(todo, api) {
+  if (todo.done) return null;
+  return h('input', {
+    type: 'date',
+    className: 'tp-due-input' + (todo.due ? ' has-value' : ''),
+    value: todo.due || '',
+    title: api.t('dueSet'),
+    'aria-label': api.t('dueSet'),
+    onChange: (event) => api.setDue(todo.id, event.target.value || ''),
+    // The row is a drop target; a click in the date field is not a drag.
+    onMouseDown: (event) => event.stopPropagation(),
+    onClick: (event) => event.stopPropagation(),
+  });
+}
+
+/**
  * The drag grip. It is the only draggable element of a row, so the text can be
  * selected and the buttons clicked without starting a drag.
+ *
+ * `options.readOnlyDrag` keeps the grip's column (so archived rows line up with
+ * the board's) but drops the drag handlers: dropping into an archive list would
+ * be a reorder across views, which no transition accepts.
  */
-function renderGrip(item, api) {
+function renderGrip(item, api, options) {
+  const inert = !!(options && options.readOnlyDrag);
   return h('span', {
-    className: 'tp-row-grip',
-    title: api.t('dragToReorder'),
+    className: 'tp-row-grip' + (inert ? ' is-inert' : ''),
+    title: inert ? undefined : api.t('dragToReorder'),
     'aria-hidden': true,
-    ...api.gripDragProps(item),
+    ...(inert ? {} : api.gripDragProps(item)),
   }, '⠿');
 }
 
@@ -119,7 +178,7 @@ function renderEntry(item, api, options) {
     style: rowTint(false, false),
     ...api.itemDragProps(item),
   },
-    renderGrip(item, api),
+    renderGrip(item, api, options),
     withKind ? h(KindBadge, { kind: KIND_ENTRY, label: api.t('kindNote'), size: 14 }) : null,
     h('div', { className: 'tp-todo-main' },
       editableText(item, api)),
@@ -149,7 +208,7 @@ function renderTodo(todo, api, options) {
     style: rowTint(true, todo.done),
     ...api.itemDragProps(todo),
   },
-    renderGrip(todo, api),
+    renderGrip(todo, api, options),
     withKind ? h(KindBadge, { kind: KIND_TODO, label: t('kindTodo'), size: 14 }) : null,
     h('button', {
       type: 'button',
@@ -160,9 +219,12 @@ function renderTodo(todo, api, options) {
     }, todo.done ? h(CheckIcon, { size: 12 }) : null),
     h('div', { className: 'tp-todo-main' },
       editableText(todo, api),
-      todo.done && todo.completedAt
-        ? h('span', { className: 'tp-todo-time' }, t('completedAt').replace('{time}', formatTime(todo.completedAt)))
-        : null),
+      h('div', { className: 'tp-todo-meta' },
+        dueBadge(todo, api),
+        todo.done && todo.completedAt
+          ? h('span', { className: 'tp-todo-time' }, t('completedAt').replace('{time}', formatTime(todo.completedAt)))
+          : null)),
+    dueControl(todo, api),
     canEdit(todo) ? h('button', {
       type: 'button',
       className: 'tp-icon-btn tp-edit-btn',
