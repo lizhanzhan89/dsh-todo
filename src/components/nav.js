@@ -18,7 +18,7 @@
  * @param {object}  api       page state and transitions
  */
 function navButton(group, draggable, count, api) {
-  const { t, activeGroup, dragId, dropId, setDragId, setDropId, setDragOverTrash, jumpToGroup, reorderProject } = api;
+  const { t, activeGroup, dragId, dropId, setDragId, setDropId, setDragOverTrash, setDragOverArchive, jumpToGroup, reorderProject } = api;
   const key = groupKey(group.id);
   return h('button', {
     key,
@@ -63,7 +63,9 @@ function navButton(group, draggable, count, api) {
     onDragEnd: () => {
       setDragId(null);
       setDropId(null);
+      // Both zones highlight while a project is dragged; clear both on release.
       setDragOverTrash(false);
+      setDragOverArchive(false);
     },
   },
     h('span', { className: 'tp-nav-grip' + (draggable ? '' : ' is-blank'), 'aria-hidden': true }, draggable ? '⠿' : null),
@@ -72,40 +74,76 @@ function navButton(group, draggable, count, api) {
 }
 
 /**
- * The drop zone that deletes a project. It only reacts to project rows and only
- * lights up while one is actually being dragged.
+ * One of the two drop zones under the nav list: dropping a dragged project here
+ * deletes it, or archives it.
+ *
+ * Both zones are the same control with different labels, because they are used
+ * the same way: they only react to project rows, and they say what will happen
+ * to *that* project by name. Keeping deletion and archiving on the same gesture
+ * is what makes the pair learnable - drag a project off the list, then pick
+ * which way.
+ *
+ * A zone with nothing being dragged is invisible and collapses to nothing: two
+ * empty dashed boxes sitting under the list all day would read as disabled
+ * buttons nobody can press.
+ *
+ * @param {object} options { kind: 'trash' | 'archive', icon, label, named, onDrop }
  */
-function trashZone(api) {
-  const { t, state, dragId, dragOverTrash, setDragId, setDropId, setDragOverTrash, removeProject, dropId } = api;
+function dropZone(api, options) {
+  const { t, state, dragId, setDragId, setDropId, dropId } = api;
+  const over = options.kind === 'trash' ? api.dragOverTrash : api.dragOverArchive;
+  const setOver = options.kind === 'trash' ? api.setDragOverTrash : api.setDragOverArchive;
   const draggedProject = dragId === null ? null : state.projects.find((p) => p.id === dragId);
+  const isHot = over && draggedProject;
 
   return h('div', {
-    className: 'tp-nav-drop-trash' +
-      (draggedProject ? ' is-armed' : '') +
-      (dragOverTrash && draggedProject ? ' is-hot' : ''),
+    className: 'tp-nav-drop ' + options.kind +
+      (isHot ? ' is-hot' : ''),
     onDragOver: (event) => {
       if (!draggedProject) return;
       event.preventDefault();
       try { event.dataTransfer.dropEffect = 'move'; } catch (e) { /* ignore */ }
-      if (!dragOverTrash) setDragOverTrash(true);
+      if (!over) setOver(true);
       // Leave the rows' own highlight behind once the pointer is here.
       if (dropId !== null) setDropId(null);
     },
-    onDragLeave: () => { if (dragOverTrash) setDragOverTrash(false); },
+    onDragLeave: () => { if (over) setOver(false); },
     onDrop: (event) => {
       event.preventDefault();
       const project = draggedProject;
       setDragId(null);
       setDropId(null);
-      setDragOverTrash(false);
-      if (project) removeProject(project);
+      setOver(false);
+      if (project) options.onDrop(project);
     },
   },
-    h('span', { className: 'tp-nav-drop-icon', 'aria-hidden': true }, h(TrashIcon, { size: 13 })),
+    h('span', { className: 'tp-nav-drop-icon', 'aria-hidden': true }, h(options.icon, { size: 13 })),
     h('span', { className: 'tp-nav-drop-text' },
       draggedProject
-        ? t('dragToDeleteNamed').replace('{name}', draggedProject.name)
-        : t('dragToDelete')));
+        ? options.named.replace('{name}', draggedProject.name)
+        : t(options.label)));
+}
+
+/** The delete zone: drag a project here to send it to the recycle bin. */
+function trashZone(api) {
+  return dropZone(api, {
+    kind: 'trash',
+    icon: TrashIcon,
+    label: 'dragToDelete',
+    named: api.t('dragToDeleteNamed'),
+    onDrop: (project) => api.removeProject(project),
+  });
+}
+
+/** The archive zone: drag a project here to take it off the board. */
+function archiveZone(api) {
+  return dropZone(api, {
+    kind: 'archive',
+    icon: ArchiveIcon,
+    label: 'dragToArchive',
+    named: api.t('dragToArchiveNamed'),
+    onDrop: (project) => api.archiveProject(project.id),
+  });
 }
 
 /** "New project" button, or the name field while one is being created. */
@@ -209,7 +247,12 @@ function renderNav(api) {
     h('span', { className: 'tp-nav-name' }, t('archive')),
     archived.length ? h('span', { className: 'tp-nav-count' }, String(archived.length)) : null);
 
-  return h('nav', { className: 'tp-nav', 'aria-label': t('navTitle') },
+  // The drop zones only render while a project row is being dragged, and the
+  // class tells CSS to show them: an empty dashed box all day would read as a
+  // button nobody can press.
+  const dragging = dragId !== null;
+
+  return h('nav', { className: 'tp-nav' + (dragging ? ' is-dragging' : ''), 'aria-label': t('navTitle') },
     h('div', { className: 'tp-nav-head' }, t('navTitle')),
     h('div', { className: 'tp-nav-list' },
       rows,
@@ -223,6 +266,9 @@ function renderNav(api) {
         h('span', { className: 'tp-nav-name' }, t('trash')),
         state.trash.length ? h('span', { className: 'tp-nav-count' }, String(state.trash.length)) : null),
       archiveRow),
+    // Archive sits above delete: the gentler of the two outcomes is the one the
+    // pointer reaches first.
+    archiveZone(api),
     trashZone(api),
     h('div', { className: 'tp-nav-foot' },
       dataControls(api),

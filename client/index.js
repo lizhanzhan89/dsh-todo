@@ -64,7 +64,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-06.1';
+    const BUILD = '2026-11-06.2';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -122,15 +122,16 @@ window.__ModuleLoader__.load({
       navTitle: 'Jump to',
       navEmpty: 'No projects yet',
       dragToReorder: 'Drag to reorder',
-      dragToDelete: 'Drag a project here to delete',
+      dragToDelete: 'Drop here to delete',
       dragToDeleteNamed: 'Release to delete “{name}”',
+      dragToArchive: 'Drop here to archive',
+      dragToArchiveNamed: 'Release to archive “{name}”',
       archive: 'Archive',
-      archiveHint: 'Archived projects leave the board. Their items and completion state are kept.',
-      archiveProject: 'Archive this project',
+      archiveHint: 'Archived projects leave the board. Their items and completion state are kept. Drag a project row onto the archive zone to move it here.',
       unarchive: 'Unarchive',
       unarchiveHint: 'Put the project back on the board',
       archiveNothing: 'Nothing archived yet',
-      archiveNothingHint: 'Use the archive button next to a project name to move it here.',
+      archiveNothingHint: 'Drag a project row onto the archive zone in the sidebar to move it here.',
       archiveEmpty: 'This project has no items',
       archiveEmptyHint: 'It was already empty when it was archived.',
       archiveOpenCount: '{count} open',
@@ -138,6 +139,8 @@ window.__ModuleLoader__.load({
       dataFolder: 'Data folder',
       dataLocation: 'Data file: {dataFile}\nBackups: {backupDir}',
       dueSet: 'Set a deadline',
+      dueChange: 'Deadline: {date} (click to change)',
+      dueClear: 'Clear the deadline',
       dueTitle: 'Deadline: {date}',
       dueToday: 'Today',
       dueTomorrow: 'Tomorrow',
@@ -233,15 +236,16 @@ window.__ModuleLoader__.load({
       navTitle: '快速跳转',
       navEmpty: '还没有项目',
       dragToReorder: '拖动以排序',
-      dragToDelete: '把项目拖到这里删除',
+      dragToDelete: '拖到这里删除',
       dragToDeleteNamed: '松开即删除“{name}”',
+      dragToArchive: '拖到这里归档',
+      dragToArchiveNamed: '松开即归档“{name}”',
       archive: '归档',
-      archiveHint: '归档的项目不显示在看板上，条目和完成状态都保留。',
-      archiveProject: '归档这个项目',
+      archiveHint: '归档的项目不显示在看板上，条目和完成状态都保留。把导航里的项目行拖到归档区域即可移入。',
       unarchive: '取消归档',
       unarchiveHint: '把项目放回看板',
       archiveNothing: '还没有归档的项目',
-      archiveNothingHint: '在项目标题旁点归档按钮，项目会移到这里。',
+      archiveNothingHint: '把项目行拖到左侧导航的归档区域，项目会移到这里。',
       archiveEmpty: '这个项目没有条目',
       archiveEmptyHint: '它在归档时就是空的。',
       archiveOpenCount: '未完成 {count}',
@@ -249,6 +253,8 @@ window.__ModuleLoader__.load({
       dataFolder: '数据目录',
       dataLocation: '数据文件：{dataFile}\n备份目录：{backupDir}',
       dueSet: '设置截止日期',
+      dueChange: '截止日期：{date}（点击修改）',
+      dueClear: '清除截止日期',
       dueTitle: '截止日期：{date}',
       dueToday: '今天',
       dueTomorrow: '明天',
@@ -633,9 +639,13 @@ window.__ModuleLoader__.load({
     .tp-nav-item:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
     .tp-nav-item.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-weight:500}
     .tp-nav-grip.is-blank{opacity:0}
-    .tp-nav-drop-trash{margin:8px 8px 0;padding:8px 10px;display:flex;align-items:center;gap:8px;border:.5px dashed var(--dsw-alias-border-l2);border-radius:10px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:16px;opacity:0;transition:opacity .12s,border-color .12s,background .12s,color .12s}
-    .tp-nav-drop-trash.is-armed{opacity:1}
-    .tp-nav-drop-trash.is-hot{border-color:var(--dsw-alias-state-error-primary);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
+    /* Two drop zones for a dragged project, sharing one look: they only exist while
+       a project is being dragged, and they collapse to nothing otherwise. Archive
+       sits above delete, so the recoverable outcome is the one reached first. */
+    .tp-nav-drop{display:none;margin:4px 8px 0;padding:8px 10px;align-items:center;gap:8px;border:.5px dashed var(--dsw-alias-border-l2);border-radius:10px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:16px;transition:border-color .12s,background .12s,color .12s}
+    .tp-nav.is-dragging .tp-nav-drop{display:flex}
+    .tp-nav-drop.is-hot{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+    .tp-nav-drop.trash.is-hot{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
     .tp-nav-drop-icon{flex:none;display:inline-flex;align-items:center}
     .tp-nav-drop-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .tp-nav-count{transition:opacity .12s}
@@ -815,20 +825,27 @@ window.__ModuleLoader__.load({
     .tp-notice.is-error .tp-notice-close:hover{color:var(--dsw-alias-state-error-primary)}
 
     /* --- deadlines ------------------------------------------------------------
-       The field is a native date input, so it carries the platform's own picker and
-       its own locale formatting. It is hidden by default and only appears once the
-       row is hovered or already has a date: an always-visible date field on every
-       row would read as a column of empty boxes. */
-    .tp-due-input{flex:none;width:26px;height:24px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer;opacity:0;transition:opacity .12s,width .12s,background .12s}
-    .tp-todo:hover .tp-due-input,.tp-due-input:focus-visible,.tp-due-input.has-value{opacity:1}
-    .tp-due-input.has-value{width:auto;min-width:118px;padding:0 6px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l1)}
-    .tp-due-input:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
-    .tp-due-input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
-    .tp-due-input::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer}
-    .tp-due-input:hover::-webkit-calendar-picker-indicator{opacity:.9}
-    /* The add field's date picker is always visible: it is part of the input line,
-       and a hidden control there would be a feature nobody finds. */
-    .tp-add-due{opacity:1;width:auto;min-width:104px;padding:0 4px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l2);height:30px;align-self:flex-start}
+       The control is a glyph, not a field: a date input on every row would read as
+       a form. The real date input is invisible and stretched over the glyph, so the
+       click lands on it and the browser opens its own picker in the right place. */
+    .tp-due-wrap{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;color:var(--dsw-alias-label-secondary);cursor:pointer;opacity:0;transition:opacity .12s,background .12s,color .12s}
+    .tp-todo:hover .tp-due-wrap,.tp-due-wrap:focus-within,.tp-due-wrap.has-value{opacity:1}
+    .tp-due-wrap:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+    .tp-due-wrap.has-value{color:var(--dsw-alias-brand-primary)}
+    /* A deadline that is due or late colours the glyph, so the row says it even
+       before the badge below is read. */
+    .tp-due-wrap.is-today{color:var(--dsw-alias-brand-primary)}
+    .tp-due-wrap.is-overdue{color:var(--dsw-alias-state-error-primary)}
+    .tp-due-wrap svg{pointer-events:none}
+    .tp-due-input{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;margin:0;background:transparent;opacity:0;cursor:pointer;-webkit-appearance:none;appearance:none}
+    .tp-due-input::-webkit-date-and-time-value{color:transparent}
+    .tp-due-input:focus-visible{outline:none}
+    .tp-due-wrap:focus-within{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
+    /* Clearing rides on the same control and only exists once there is a date. */
+    .tp-due-clear{position:absolute;right:-5px;top:-5px;width:13px;height:13px;padding:0;border:0;border-radius:50%;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);display:none;align-items:center;justify-content:center;cursor:pointer}
+    .tp-due-wrap.has-value:hover .tp-due-clear{display:inline-flex}
+    .tp-due-clear:hover{background:var(--dsw-alias-state-error-primary);color:#fff}
+
 
     /* The badge sits under the text with the finish time. Colour carries urgency:
        overdue is the error colour, today is the brand accent, the rest stays quiet. */
@@ -1016,6 +1033,16 @@ window.__ModuleLoader__.load({
     function FolderIcon({ size = 13 }) {
       return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
         h('path', { d: 'M2.4 4.6a1 1 0 0 1 1-1h2.5l1.4 1.6h5.3a1 1 0 0 1 1 1v6.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V4.6z', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }));
+    }
+
+    /**
+     * A plain cross: "clear". Smaller and thinner than `CloseIcon`, because it sits
+     * on the corner of a 24px control and a full-weight X there reads as a close
+     * button for the whole row.
+     */
+    function CrossIcon({ size = 10 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 12 12', 'aria-hidden': true },
+        h('path', { d: 'M3 3l6 6M9 3l-6 6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }));
     }
 
     /* ---------------------------------------------------------------------- */
@@ -1492,25 +1519,49 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The deadline control: a native date field.
+     * The deadline control: a calendar button that opens the platform's date picker.
      *
-     * A `<input type="date">` is the whole date picker for free - keyboard entry,
-     * the platform's own calendar popup, locale-correct display - and its value is
-     * already `YYYY-MM-DD`, which is exactly what is stored.
+     * The visible control is only a glyph, because a date field on every row would
+     * read as a form. The real `<input type="date">` still exists but is invisible
+     * and sits underneath the button, so clicking the glyph opens the browser's own
+     * picker rather than a hand-written calendar - and its value is already
+     * `YYYY-MM-DD`, which is exactly what is stored.
+     *
+     * A row that already has a deadline shows the date in the badge instead, so the
+     * button never has to display text.
      */
     function dueControl(todo, api) {
       if (todo.done) return null;
-      return h('input', {
-        type: 'date',
-        className: 'tp-due-input' + (todo.due ? ' has-value' : ''),
-        value: todo.due || '',
-        title: api.t('dueSet'),
-        'aria-label': api.t('dueSet'),
-        onChange: (event) => api.setDue(todo.id, event.target.value || ''),
-        // The row is a drop target; a click in the date field is not a drag.
-        onMouseDown: (event) => event.stopPropagation(),
-        onClick: (event) => event.stopPropagation(),
-      });
+      const has = Boolean(todo.due);
+      const label = has
+        ? api.t('dueChange').replace('{date}', todo.due)
+        : api.t('dueSet');
+      const tone = has ? (todo.done ? 'done' : dueState(todo.due)) : null;
+      return h('span', { className: 'tp-due-wrap' + (has ? ' has-value' : '') + (tone ? ' is-' + tone : '') },
+        // The picker itself: invisible, stretched over the button, clicked through.
+        h('input', {
+          type: 'date',
+          className: 'tp-due-input',
+          value: todo.due || '',
+          title: label,
+          'aria-label': label,
+          onChange: (event) => api.setDue(todo.id, event.target.value || ''),
+          // The row is a drop target; a click in the date field is not a drag.
+          onMouseDown: (event) => event.stopPropagation(),
+          onClick: (event) => event.stopPropagation(),
+        }),
+        h(CalendarIcon, { size: 14 }),
+        // Clearing is part of the same control: without it a mis-click would leave a
+        // deadline that can only be removed by reopening the picker.
+        has
+          ? h('button', {
+              type: 'button',
+              className: 'tp-due-clear',
+              title: api.t('dueClear'),
+              'aria-label': api.t('dueClear'),
+              onClick: () => api.setDue(todo.id, ''),
+            }, h(CloseIcon, { size: 10 }))
+          : null);
     }
 
     /**
@@ -1644,8 +1695,6 @@ window.__ModuleLoader__.load({
      */
     function renderGroup(group, api) {
       const { t, state, tabFor, setTabFor, draftFor, setDraftFor, addTodo, addNote, groupAnchor } = api;
-      const draftDueFor = (projectId) => api.draftDueFor(projectId);
-      const addDueTitle = t('dueSet');
       const all = itemsOf(state, group.id);
       const todoItems = all.filter((item) => !isEntry(item));
       const noteItems = all.filter(isEntry);
@@ -1747,19 +1796,6 @@ window.__ModuleLoader__.load({
       // The field is a one-row textarea so a multi-line entry can be typed: Enter
       // inserts a newline and Ctrl/Cmd+Enter adds the item, which is what a plain
       // textarea user expects. Shift+Enter is left to the browser.
-      // The deadline field only appears where todos are added; a note has nothing to
-      // finish, so the field is absent rather than disabled.
-      const addDueProps = isEntriesTab
-        ? null
-        : {
-            type: 'date',
-            className: 'tp-due-input tp-add-due' + (draftDueFor(group.id) ? ' has-value' : ''),
-            value: draftDueFor(group.id),
-            title: addDueTitle,
-            'aria-label': addDueTitle,
-            onChange: (event) => api.setDraftDueFor(group.id, event.target.value),
-          };
-
       const addControls = (tab === TAB_ACTIVE || tab === TAB_ENTRIES || isAllTab)
         ? h('div', { className: 'tp-add-inline' },
             h('textarea', {
@@ -1776,7 +1812,6 @@ window.__ModuleLoader__.load({
               },
               'aria-label': placeholder,
             }),
-            addDueProps ? h('input', addDueProps) : null,
             h('button', {
               type: 'button',
               className: 'tp-btn tp-btn-primary tp-add-btn',
@@ -1801,19 +1836,11 @@ window.__ModuleLoader__.load({
               tabButton(TAB_ACTIVE, t('tabActive'), active.length),
               tabButton(TAB_DONE, t('tabDone'), done.length),
               tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
+          // The name is the whole centre column: archiving is a drag on the nav row,
+          // not a button here, so a finished project leaves the same way a deleted
+          // one does.
           h('div', { className: 'tp-group-center' },
-            h('h2', { className: 'tp-group-title' }, group.name),
-            // Archiving is per project: the default group has no id and cannot leave
-            // the board, and a row of buttons belongs to a header that has a name.
-            group.id
-              ? h('button', {
-                  type: 'button',
-                  className: 'tp-icon-btn tp-archive-btn',
-                  title: t('archiveProject'),
-                  'aria-label': t('archiveProject'),
-                  onClick: () => api.archiveProject(group.id),
-                }, h(ArchiveIcon, { size: 13 }))
-              : null),
+            h('h2', { className: 'tp-group-title' }, group.name)),
           h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
         doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
         h('div', { className: 'tp-group-body' },
@@ -1845,7 +1872,7 @@ window.__ModuleLoader__.load({
      * @param {object}  api       page state and transitions
      */
     function navButton(group, draggable, count, api) {
-      const { t, activeGroup, dragId, dropId, setDragId, setDropId, setDragOverTrash, jumpToGroup, reorderProject } = api;
+      const { t, activeGroup, dragId, dropId, setDragId, setDropId, setDragOverTrash, setDragOverArchive, jumpToGroup, reorderProject } = api;
       const key = groupKey(group.id);
       return h('button', {
         key,
@@ -1890,7 +1917,9 @@ window.__ModuleLoader__.load({
         onDragEnd: () => {
           setDragId(null);
           setDropId(null);
+          // Both zones highlight while a project is dragged; clear both on release.
           setDragOverTrash(false);
+          setDragOverArchive(false);
         },
       },
         h('span', { className: 'tp-nav-grip' + (draggable ? '' : ' is-blank'), 'aria-hidden': true }, draggable ? '⠿' : null),
@@ -1899,40 +1928,76 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The drop zone that deletes a project. It only reacts to project rows and only
-     * lights up while one is actually being dragged.
+     * One of the two drop zones under the nav list: dropping a dragged project here
+     * deletes it, or archives it.
+     *
+     * Both zones are the same control with different labels, because they are used
+     * the same way: they only react to project rows, and they say what will happen
+     * to *that* project by name. Keeping deletion and archiving on the same gesture
+     * is what makes the pair learnable - drag a project off the list, then pick
+     * which way.
+     *
+     * A zone with nothing being dragged is invisible and collapses to nothing: two
+     * empty dashed boxes sitting under the list all day would read as disabled
+     * buttons nobody can press.
+     *
+     * @param {object} options { kind: 'trash' | 'archive', icon, label, named, onDrop }
      */
-    function trashZone(api) {
-      const { t, state, dragId, dragOverTrash, setDragId, setDropId, setDragOverTrash, removeProject, dropId } = api;
+    function dropZone(api, options) {
+      const { t, state, dragId, setDragId, setDropId, dropId } = api;
+      const over = options.kind === 'trash' ? api.dragOverTrash : api.dragOverArchive;
+      const setOver = options.kind === 'trash' ? api.setDragOverTrash : api.setDragOverArchive;
       const draggedProject = dragId === null ? null : state.projects.find((p) => p.id === dragId);
+      const isHot = over && draggedProject;
 
       return h('div', {
-        className: 'tp-nav-drop-trash' +
-          (draggedProject ? ' is-armed' : '') +
-          (dragOverTrash && draggedProject ? ' is-hot' : ''),
+        className: 'tp-nav-drop ' + options.kind +
+          (isHot ? ' is-hot' : ''),
         onDragOver: (event) => {
           if (!draggedProject) return;
           event.preventDefault();
           try { event.dataTransfer.dropEffect = 'move'; } catch (e) { /* ignore */ }
-          if (!dragOverTrash) setDragOverTrash(true);
+          if (!over) setOver(true);
           // Leave the rows' own highlight behind once the pointer is here.
           if (dropId !== null) setDropId(null);
         },
-        onDragLeave: () => { if (dragOverTrash) setDragOverTrash(false); },
+        onDragLeave: () => { if (over) setOver(false); },
         onDrop: (event) => {
           event.preventDefault();
           const project = draggedProject;
           setDragId(null);
           setDropId(null);
-          setDragOverTrash(false);
-          if (project) removeProject(project);
+          setOver(false);
+          if (project) options.onDrop(project);
         },
       },
-        h('span', { className: 'tp-nav-drop-icon', 'aria-hidden': true }, h(TrashIcon, { size: 13 })),
+        h('span', { className: 'tp-nav-drop-icon', 'aria-hidden': true }, h(options.icon, { size: 13 })),
         h('span', { className: 'tp-nav-drop-text' },
           draggedProject
-            ? t('dragToDeleteNamed').replace('{name}', draggedProject.name)
-            : t('dragToDelete')));
+            ? options.named.replace('{name}', draggedProject.name)
+            : t(options.label)));
+    }
+
+    /** The delete zone: drag a project here to send it to the recycle bin. */
+    function trashZone(api) {
+      return dropZone(api, {
+        kind: 'trash',
+        icon: TrashIcon,
+        label: 'dragToDelete',
+        named: api.t('dragToDeleteNamed'),
+        onDrop: (project) => api.removeProject(project),
+      });
+    }
+
+    /** The archive zone: drag a project here to take it off the board. */
+    function archiveZone(api) {
+      return dropZone(api, {
+        kind: 'archive',
+        icon: ArchiveIcon,
+        label: 'dragToArchive',
+        named: api.t('dragToArchiveNamed'),
+        onDrop: (project) => api.archiveProject(project.id),
+      });
     }
 
     /** "New project" button, or the name field while one is being created. */
@@ -2036,7 +2101,12 @@ window.__ModuleLoader__.load({
         h('span', { className: 'tp-nav-name' }, t('archive')),
         archived.length ? h('span', { className: 'tp-nav-count' }, String(archived.length)) : null);
 
-      return h('nav', { className: 'tp-nav', 'aria-label': t('navTitle') },
+      // The drop zones only render while a project row is being dragged, and the
+      // class tells CSS to show them: an empty dashed box all day would read as a
+      // button nobody can press.
+      const dragging = dragId !== null;
+
+      return h('nav', { className: 'tp-nav' + (dragging ? ' is-dragging' : ''), 'aria-label': t('navTitle') },
         h('div', { className: 'tp-nav-head' }, t('navTitle')),
         h('div', { className: 'tp-nav-list' },
           rows,
@@ -2050,6 +2120,9 @@ window.__ModuleLoader__.load({
             h('span', { className: 'tp-nav-name' }, t('trash')),
             state.trash.length ? h('span', { className: 'tp-nav-count' }, String(state.trash.length)) : null),
           archiveRow),
+        // Archive sits above delete: the gentler of the two outcomes is the one the
+        // pointer reaches first.
+        archiveZone(api),
         trashZone(api),
         h('div', { className: 'tp-nav-foot' },
           dataControls(api),
@@ -2320,8 +2393,6 @@ window.__ModuleLoader__.load({
       const [drafts, setDrafts] = React.useState({});
       // Per-group selected tab: 'active' | 'done' | 'entries'.
       const [tabs, setTabs] = React.useState({});
-      // Per-group deadline drafts for the add field, same keying as the text drafts.
-      const [dueDrafts, setDueDrafts] = React.useState({});
       const [projectDraft, setProjectDraft] = React.useState('');
       const [creatingProject, setCreatingProject] = React.useState(false);
       // Left quick-jump nav: which group is highlighted, plus the scroll container
@@ -2341,8 +2412,9 @@ window.__ModuleLoader__.load({
       // Drag-and-drop project reordering inside the quick-jump nav.
       const [dragId, setDragId] = React.useState(null);
       const [dropId, setDropId] = React.useState(null);
-      // True while a project row is hovering the nav's delete zone.
+      // True while a project row is hovering the nav's delete or archive zone.
       const [dragOverTrash, setDragOverTrash] = React.useState(false);
+      const [dragOverArchive, setDragOverArchive] = React.useState(false);
       // Drag-and-drop item reordering (todos and notes) inside a group tab.
       const [itemDragId, setItemDragId] = React.useState(null);
       const [itemDropId, setItemDropId] = React.useState(null);
@@ -2417,9 +2489,7 @@ window.__ModuleLoader__.load({
       const setDraftFor = (projectId, value) =>
         setDrafts((prev) => ({ ...prev, [groupKey(projectId)]: value }));
       const draftFor = (projectId) => drafts[groupKey(projectId)] || '';
-      const setDraftDueFor = (projectId, value) =>
-        setDueDrafts((prev) => ({ ...prev, [groupKey(projectId)]: value }));
-      const draftDueFor = (projectId) => dueDrafts[groupKey(projectId)] || '';
+
       const tabFor = (projectId) => tabs[groupKey(projectId)] || TAB_ACTIVE;
       const setTabFor = (projectId, value) =>
         setTabs((prev) => ({ ...prev, [groupKey(projectId)]: value }));
@@ -2435,13 +2505,14 @@ window.__ModuleLoader__.load({
       };
 
       // --- adding ---------------------------------------------------------------
+      // Adding never asks for a deadline. A date is a decision about one item, and
+      // it belongs on the row where the item is - a field next to the add button
+      // invites setting a date for a thought that has not been written yet.
       const addItemFor = (projectId, kind) => {
         const text = draftFor(projectId).trim();
         if (!text) return;
-        update((prev) => addItem(prev, projectId, kind, text, draftDueFor(projectId)));
+        update((prev) => addItem(prev, projectId, kind, text));
         setDraftFor(projectId, '');
-        // The deadline belongs to the item that was just added, not to the next one.
-        setDraftDueFor(projectId, '');
       };
       const addTodo = (projectId) => addItemFor(projectId, KIND_TODO);
       const addNote = (projectId) => addItemFor(projectId, KIND_ENTRY);
@@ -2714,7 +2785,8 @@ window.__ModuleLoader__.load({
         t, state, groups, view, activeGroup,
         setView, setQuery, query, includeDone, setIncludeDone, editCols,
         setDragId, setDropId, dragId, dropId, setDragOverTrash, dragOverTrash,
-        dueDrafts, draftDueFor, setDraftDueFor, setDue,
+        setDragOverArchive, dragOverArchive,
+        setDue,
         archived, archiveProject, unarchiveProject,
         creatingProject, setCreatingProject, projectDraft, setProjectDraft,
         editingId, editDraft, setEditDraft,

@@ -16,9 +16,13 @@ const CSS = `
 .tp-nav-item:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
 .tp-nav-item.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-weight:500}
 .tp-nav-grip.is-blank{opacity:0}
-.tp-nav-drop-trash{margin:8px 8px 0;padding:8px 10px;display:flex;align-items:center;gap:8px;border:.5px dashed var(--dsw-alias-border-l2);border-radius:10px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:16px;opacity:0;transition:opacity .12s,border-color .12s,background .12s,color .12s}
-.tp-nav-drop-trash.is-armed{opacity:1}
-.tp-nav-drop-trash.is-hot{border-color:var(--dsw-alias-state-error-primary);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
+/* Two drop zones for a dragged project, sharing one look: they only exist while
+   a project is being dragged, and they collapse to nothing otherwise. Archive
+   sits above delete, so the recoverable outcome is the one reached first. */
+.tp-nav-drop{display:none;margin:4px 8px 0;padding:8px 10px;align-items:center;gap:8px;border:.5px dashed var(--dsw-alias-border-l2);border-radius:10px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:16px;transition:border-color .12s,background .12s,color .12s}
+.tp-nav.is-dragging .tp-nav-drop{display:flex}
+.tp-nav-drop.is-hot{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.tp-nav-drop.trash.is-hot{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
 .tp-nav-drop-icon{flex:none;display:inline-flex;align-items:center}
 .tp-nav-drop-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tp-nav-count{transition:opacity .12s}
@@ -198,20 +202,27 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-notice.is-error .tp-notice-close:hover{color:var(--dsw-alias-state-error-primary)}
 
 /* --- deadlines ------------------------------------------------------------
-   The field is a native date input, so it carries the platform's own picker and
-   its own locale formatting. It is hidden by default and only appears once the
-   row is hovered or already has a date: an always-visible date field on every
-   row would read as a column of empty boxes. */
-.tp-due-input{flex:none;width:26px;height:24px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer;opacity:0;transition:opacity .12s,width .12s,background .12s}
-.tp-todo:hover .tp-due-input,.tp-due-input:focus-visible,.tp-due-input.has-value{opacity:1}
-.tp-due-input.has-value{width:auto;min-width:118px;padding:0 6px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l1)}
-.tp-due-input:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
-.tp-due-input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
-.tp-due-input::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer}
-.tp-due-input:hover::-webkit-calendar-picker-indicator{opacity:.9}
-/* The add field's date picker is always visible: it is part of the input line,
-   and a hidden control there would be a feature nobody finds. */
-.tp-add-due{opacity:1;width:auto;min-width:104px;padding:0 4px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l2);height:30px;align-self:flex-start}
+   The control is a glyph, not a field: a date input on every row would read as
+   a form. The real date input is invisible and stretched over the glyph, so the
+   click lands on it and the browser opens its own picker in the right place. */
+.tp-due-wrap{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;color:var(--dsw-alias-label-secondary);cursor:pointer;opacity:0;transition:opacity .12s,background .12s,color .12s}
+.tp-todo:hover .tp-due-wrap,.tp-due-wrap:focus-within,.tp-due-wrap.has-value{opacity:1}
+.tp-due-wrap:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.tp-due-wrap.has-value{color:var(--dsw-alias-brand-primary)}
+/* A deadline that is due or late colours the glyph, so the row says it even
+   before the badge below is read. */
+.tp-due-wrap.is-today{color:var(--dsw-alias-brand-primary)}
+.tp-due-wrap.is-overdue{color:var(--dsw-alias-state-error-primary)}
+.tp-due-wrap svg{pointer-events:none}
+.tp-due-input{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;margin:0;background:transparent;opacity:0;cursor:pointer;-webkit-appearance:none;appearance:none}
+.tp-due-input::-webkit-date-and-time-value{color:transparent}
+.tp-due-input:focus-visible{outline:none}
+.tp-due-wrap:focus-within{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
+/* Clearing rides on the same control and only exists once there is a date. */
+.tp-due-clear{position:absolute;right:-5px;top:-5px;width:13px;height:13px;padding:0;border:0;border-radius:50%;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);display:none;align-items:center;justify-content:center;cursor:pointer}
+.tp-due-wrap.has-value:hover .tp-due-clear{display:inline-flex}
+.tp-due-clear:hover{background:var(--dsw-alias-state-error-primary);color:#fff}
+
 
 /* The badge sits under the text with the finish time. Colour carries urgency:
    overdue is the error colour, today is the brand accent, the rest stays quiet. */

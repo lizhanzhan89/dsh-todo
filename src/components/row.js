@@ -130,25 +130,49 @@ function dueBadge(todo, api) {
 }
 
 /**
- * The deadline control: a native date field.
+ * The deadline control: a calendar button that opens the platform's date picker.
  *
- * A `<input type="date">` is the whole date picker for free - keyboard entry,
- * the platform's own calendar popup, locale-correct display - and its value is
- * already `YYYY-MM-DD`, which is exactly what is stored.
+ * The visible control is only a glyph, because a date field on every row would
+ * read as a form. The real `<input type="date">` still exists but is invisible
+ * and sits underneath the button, so clicking the glyph opens the browser's own
+ * picker rather than a hand-written calendar - and its value is already
+ * `YYYY-MM-DD`, which is exactly what is stored.
+ *
+ * A row that already has a deadline shows the date in the badge instead, so the
+ * button never has to display text.
  */
 function dueControl(todo, api) {
   if (todo.done) return null;
-  return h('input', {
-    type: 'date',
-    className: 'tp-due-input' + (todo.due ? ' has-value' : ''),
-    value: todo.due || '',
-    title: api.t('dueSet'),
-    'aria-label': api.t('dueSet'),
-    onChange: (event) => api.setDue(todo.id, event.target.value || ''),
-    // The row is a drop target; a click in the date field is not a drag.
-    onMouseDown: (event) => event.stopPropagation(),
-    onClick: (event) => event.stopPropagation(),
-  });
+  const has = Boolean(todo.due);
+  const label = has
+    ? api.t('dueChange').replace('{date}', todo.due)
+    : api.t('dueSet');
+  const tone = has ? (todo.done ? 'done' : dueState(todo.due)) : null;
+  return h('span', { className: 'tp-due-wrap' + (has ? ' has-value' : '') + (tone ? ' is-' + tone : '') },
+    // The picker itself: invisible, stretched over the button, clicked through.
+    h('input', {
+      type: 'date',
+      className: 'tp-due-input',
+      value: todo.due || '',
+      title: label,
+      'aria-label': label,
+      onChange: (event) => api.setDue(todo.id, event.target.value || ''),
+      // The row is a drop target; a click in the date field is not a drag.
+      onMouseDown: (event) => event.stopPropagation(),
+      onClick: (event) => event.stopPropagation(),
+    }),
+    h(CalendarIcon, { size: 14 }),
+    // Clearing is part of the same control: without it a mis-click would leave a
+    // deadline that can only be removed by reopening the picker.
+    has
+      ? h('button', {
+          type: 'button',
+          className: 'tp-due-clear',
+          title: api.t('dueClear'),
+          'aria-label': api.t('dueClear'),
+          onClick: () => api.setDue(todo.id, ''),
+        }, h(CloseIcon, { size: 10 }))
+      : null);
 }
 
 /**
