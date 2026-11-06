@@ -37,6 +37,7 @@ const SOURCES = [
   'src/components/nav.js',
   'src/components/search.js',
   'src/components/trash.js',
+  'src/components/archive.js',
   'src/page.js',
   'src/plugin.js',
 ];

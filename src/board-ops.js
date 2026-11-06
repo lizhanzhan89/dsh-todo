@@ -27,7 +27,7 @@ const itemsOf = (state, projectId) =>
   state.todos.filter((item) => projectIdOf(item) === (projectId || null));
 
 /** Append a new todo or note to the group. */
-function addItem(state, projectId, kind, text) {
+function addItem(state, projectId, kind, text, due) {
   const item = {
     id: uid(),
     text,
@@ -36,8 +36,60 @@ function addItem(state, projectId, kind, text) {
     completedAt: null,
     projectId: projectId || null,
   };
+  // Only a todo carries a deadline; a note has nothing to finish.
+  if (due && kind === KIND_TODO) item.due = due;
   return { ...state, todos: state.todos.concat(item) };
 }
+
+/**
+ * Set or clear one todo's deadline.
+ *
+ * `due` is a calendar day (`YYYY-MM-DD`), not an instant: "due Friday" means
+ * that day in the reader's own time zone, and storing a timestamp would move
+ * the date when the machine changes zone.
+ */
+function setItemDue(state, id, due) {
+  return {
+    ...state,
+    todos: state.todos.map((todo) => {
+      if (todo.id !== id) return todo;
+      const next = { ...todo };
+      if (due) next.due = due;
+      else delete next.due;
+      return next;
+    }),
+  };
+}
+
+/** A project is archived when it carries the flag; the default group never is. */
+const isArchived = (project) => Boolean(project && project.archived);
+
+/**
+ * Archive a project, or bring it back.
+ *
+ * Archiving is deliberately not deletion: the project keeps its id, its place in
+ * the order and every item it holds, so unarchiving puts it back exactly where
+ * it was. Only the board and the quick-jump list hide it.
+ */
+function setProjectArchived(state, projectId, archived) {
+  if (!projectId) return state;
+  return {
+    ...state,
+    projects: state.projects.map((project) => {
+      if (project.id !== projectId) return project;
+      const next = { ...project };
+      if (archived) next.archived = true;
+      else delete next.archived;
+      return next;
+    }),
+  };
+}
+
+/** Projects shown on the board and in the quick-jump list. */
+const liveProjects = (state) => state.projects.filter((project) => !isArchived(project));
+
+/** Projects that left the board, keeping their order. */
+const archivedProjects = (state) => state.projects.filter(isArchived);
 
 /** Check a todo off (stamping `completedAt`) or reopen it (clearing it). */
 function toggleTodo(state, id) {
@@ -194,8 +246,12 @@ function reorderProject(state, sourceId, targetId) {
   return { ...state, projects };
 }
 
-/** Groups for the board and the nav: the fixed default group first. */
+/**
+ * Groups for the board and the nav: the fixed default group first, then the
+ * projects that are not archived. The default group cannot be archived - it is
+ * not a project, it is the slot for everything without one.
+ */
 function groupList(state, defaultName) {
   return [{ id: null, name: defaultName, hint: '' }]
-    .concat(state.projects.map((p) => ({ id: p.id, name: p.name })));
+    .concat(liveProjects(state).map((p) => ({ id: p.id, name: p.name })));
 }

@@ -24,6 +24,8 @@ function TodoPage(props) {
   const [drafts, setDrafts] = React.useState({});
   // Per-group selected tab: 'active' | 'done' | 'entries'.
   const [tabs, setTabs] = React.useState({});
+  // Per-group deadline drafts for the add field, same keying as the text drafts.
+  const [dueDrafts, setDueDrafts] = React.useState({});
   const [projectDraft, setProjectDraft] = React.useState('');
   const [creatingProject, setCreatingProject] = React.useState(false);
   // Left quick-jump nav: which group is highlighted, plus the scroll container
@@ -72,7 +74,10 @@ function TodoPage(props) {
   // Persist to the Host JSON file on every change after the initial load.
   React.useEffect(() => {
     if (!loadedRef.current) return;
-    saveState(state);
+    // `meta` came from the Host and is not part of the record; posting it back
+    // would put a copy of the paths into the data file.
+    const { meta, ...record } = state;
+    saveState(record);
   }, [state]);
 
   const update = (fn) => setState((prev) => fn(prev));
@@ -116,6 +121,9 @@ function TodoPage(props) {
   const setDraftFor = (projectId, value) =>
     setDrafts((prev) => ({ ...prev, [groupKey(projectId)]: value }));
   const draftFor = (projectId) => drafts[groupKey(projectId)] || '';
+  const setDraftDueFor = (projectId, value) =>
+    setDueDrafts((prev) => ({ ...prev, [groupKey(projectId)]: value }));
+  const draftDueFor = (projectId) => dueDrafts[groupKey(projectId)] || '';
   const tabFor = (projectId) => tabs[groupKey(projectId)] || TAB_ACTIVE;
   const setTabFor = (projectId, value) =>
     setTabs((prev) => ({ ...prev, [groupKey(projectId)]: value }));
@@ -134,8 +142,10 @@ function TodoPage(props) {
   const addItemFor = (projectId, kind) => {
     const text = draftFor(projectId).trim();
     if (!text) return;
-    update((prev) => addItem(prev, projectId, kind, text));
+    update((prev) => addItem(prev, projectId, kind, text, draftDueFor(projectId)));
     setDraftFor(projectId, '');
+    // The deadline belongs to the item that was just added, not to the next one.
+    setDraftDueFor(projectId, '');
   };
   const addTodo = (projectId) => addItemFor(projectId, KIND_TODO);
   const addNote = (projectId) => addItemFor(projectId, KIND_ENTRY);
@@ -244,8 +254,10 @@ function TodoPage(props) {
           setNotice({ kind: 'error', text: t(parsed.error) });
           return;
         }
+        // Keep the loaded `meta` on the incoming record: it describes where the
+        // data lives, not what is in it.
         const merged = mergeState(state, parsed.state);
-        update(() => merged.state);
+        update((prev) => ({ ...merged.state, meta: prev.meta }));
         setNotice({ kind: 'ok', text: t('importDone', merged.counts) });
       } catch (error) {
         setNotice({ kind: 'error', text: t('importFailed', { error: String(error && error.message || error) }) });
@@ -271,16 +283,32 @@ function TodoPage(props) {
       items: state.todos.length,
       trash: state.trash.length,
     };
-    syncState(state)
+    const { meta, ...record } = state;
+    syncState(record)
       .then((result) => {
-        if (result.ok) setNotice({ kind: 'ok', text: t('syncDone', counts) });
-        else setNotice({ kind: 'error', text: t(result.error || 'syncFailed') });
+        if (result.ok) {
+          // The Host answers with the folder it wrote to; adopt it so the footer
+          // line stays correct even if the data dir was changed in the config.
+          if (result.meta && result.meta.dataDir) setState((prev) => ({ ...prev, meta: result.meta }));
+          setNotice({ kind: 'ok', text: t('syncDone', counts) });
+        } else {
+          setNotice({ kind: 'error', text: t(result.error || 'syncFailed') });
+        }
       })
       .finally(() => setSyncing(false));
   };
 
+  // --- archiving ------------------------------------------------------------
+  // Archiving moves a project off the board without touching its items: the
+  // project keeps its id and its place in `projects`, so unarchiving restores
+  // both the group and everything in it.
+  const archiveProject = (projectId) => update((prev) => setProjectArchived(prev, projectId, true));
+  const unarchiveProject = (projectId) => update((prev) => setProjectArchived(prev, projectId, false));
+  const setDue = (id, due) => update((prev) => setItemDue(prev, id, due));
+
   // --- derived values -------------------------------------------------------
   const groups = groupList(state, t('noProject'));
+  const archived = archivedProjects(state);
   // The flag decides whether finished todos appear in the combined "All" tab
   // and in search results. It is read straight from the state, so the file is
   // the single source of truth and the toggle needs no extra sync.
@@ -390,6 +418,8 @@ function TodoPage(props) {
     t, state, groups, view, activeGroup,
     setView, setQuery, query, includeDone, setIncludeDone, editCols,
     setDragId, setDropId, dragId, dropId, setDragOverTrash, dragOverTrash,
+    dueDrafts, draftDueFor, setDraftDueFor, setDue,
+    archived, archiveProject, unarchiveProject,
     creatingProject, setCreatingProject, projectDraft, setProjectDraft,
     editingId, editDraft, setEditDraft,
     searching, matches, visibleInSearch,
@@ -423,8 +453,9 @@ function TodoPage(props) {
           t('searchNothingHint'))
       : groups.map((group) => renderGroup(group, api)));
 
-  // The recycle bin replaces the board; search filters the board in place.
-  const content = view === 'trash' ? renderTrash(api) : board;
+  // The recycle bin and the archive each replace the board; search filters the
+  // board in place.
+  const content = view === 'trash' ? renderTrash(api) : view === 'archive' ? renderArchive(api) : board;
 
   // A short-lived status line for export and import. It sits over the pane so
   // the layout does not jump, and carries its own close button.

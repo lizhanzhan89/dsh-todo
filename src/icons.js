@@ -125,3 +125,32 @@ function SyncIcon({ size = 13 }) {
     h('path', { d: 'M11.4 1.9v2.7H8.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
     h('path', { d: 'M4.6 14.1v-2.7h2.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }));
 }
+
+/** A calendar page: the deadline control and the due-date badge. */
+function CalendarIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('rect', { x: 2.6, y: 3.6, width: 10.8, height: 9.8, rx: 1.6, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 }),
+    h('path', { d: 'M2.6 6.6h10.8M5.6 2.4v2.4M10.4 2.4v2.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }));
+}
+
+/** A closed box: "archive". */
+function ArchiveIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('rect', { x: 2.2, y: 3, width: 11.6, height: 3.4, rx: 1, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 }),
+    h('path', { d: 'M3.4 6.4v6.2a1 1 0 0 0 1 1h7.2a1 1 0 0 0 1-1V6.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+    h('path', { d: 'M6.4 9.4h3.2', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }));
+}
+
+/** A box with its lid lifted: "unarchive". */
+function UnarchiveIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('rect', { x: 2.2, y: 2.2, width: 11.6, height: 3.2, rx: 1, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 }),
+    h('path', { d: 'M3.4 5.6v6.6a1 1 0 0 0 1 1h7.2a1 1 0 0 0 1-1V5.6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+    h('path', { d: 'M8 12v-3.4M6.6 10l1.4-1.4 1.4 1.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+}
+
+/** A folder: the data-location line in the footer. */
+function FolderIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('path', { d: 'M2.4 4.6a1 1 0 0 1 1-1h2.5l1.4 1.6h5.3a1 1 0 0 1 1 1v6.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V4.6z', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }));
+}

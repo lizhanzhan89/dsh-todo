@@ -23,13 +23,34 @@ function emptyState() {
 /** Coerce whatever came back from disk into the shape the page expects. */
 function normalizeState(parsed) {
   return {
+    // `archived` is a flag on the project itself: an archived project keeps its
+    // items and its position, it just leaves the board for the archive view.
     projects: Array.isArray(parsed && parsed.projects) ? parsed.projects : [],
+    // `due` is a calendar day ("2026-11-06"), kept on the todo beside the text.
     todos: Array.isArray(parsed && parsed.todos) ? parsed.todos : [],
     // The recycle bin: deleted items and projects kept for restoring.
     trash: Array.isArray(parsed && parsed.trash) ? parsed.trash : [],
     // A file written before this flag existed has no value; default to showing
     // finished todos, which is what those versions did.
     includeDone: !(parsed && parsed.includeDone === false),
+  };
+}
+
+function emptyMeta() {
+  return { dataDir: '', dataFile: '', backupDir: '' };
+}
+
+/**
+ * Where the Host keeps the data. It rides along with the state response; an
+ * older Host answers with just the state, so this is always optional.
+ */
+function readMeta(data) {
+  const meta = data && data.meta;
+  if (!meta || typeof meta !== 'object') return emptyMeta();
+  return {
+    dataDir: typeof meta.dataDir === 'string' ? meta.dataDir : '',
+    dataFile: typeof meta.dataFile === 'string' ? meta.dataFile : '',
+    backupDir: typeof meta.backupDir === 'string' ? meta.backupDir : '',
   };
 }
 
@@ -41,15 +62,20 @@ function uid() {
   return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 }
 
-/** Read the stored state. A missing file or a network error yields empty state. */
+/**
+ * Read the stored state. A missing file or a network error yields empty state.
+ *
+ * Returns the state with its `meta` already reduced to strings, so the caller
+ * can show the data folder without re-checking the response shape.
+ */
 async function loadState() {
   try {
     const res = await fetch(STATE_URL, { method: 'GET', headers: { accept: 'application/json' } });
-    if (!res.ok) return emptyState();
+    if (!res.ok) return { ...emptyState(), meta: emptyMeta() };
     const data = await res.json();
-    return normalizeState(data);
+    return { ...normalizeState(data), meta: readMeta(data) };
   } catch (e) {
-    return emptyState();
+    return { ...emptyState(), meta: emptyMeta() };
   }
 }
 
@@ -82,7 +108,11 @@ async function syncState(state) {
       body: JSON.stringify(state),
     });
     if (!res || !res.ok) return { ok: false, error: 'syncFailed' };
-    return { ok: true };
+    let meta = emptyMeta();
+    try {
+      meta = readMeta(await res.json());
+    } catch (e) { /* an older Host answers with a bare { ok: true } */ }
+    return { ok: true, meta };
   } catch (e) {
     return { ok: false, error: 'syncFailed' };
   }

@@ -196,4 +196,47 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-notice-text{flex:1;min-width:0}
 .tp-notice-close{flex:none}
 .tp-notice.is-error .tp-notice-close:hover{color:var(--dsw-alias-state-error-primary)}
+
+/* --- deadlines ------------------------------------------------------------
+   The field is a native date input, so it carries the platform's own picker and
+   its own locale formatting. It is hidden by default and only appears once the
+   row is hovered or already has a date: an always-visible date field on every
+   row would read as a column of empty boxes. */
+.tp-due-input{flex:none;width:26px;height:24px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer;opacity:0;transition:opacity .12s,width .12s,background .12s}
+.tp-todo:hover .tp-due-input,.tp-due-input:focus-visible,.tp-due-input.has-value{opacity:1}
+.tp-due-input.has-value{width:auto;min-width:118px;padding:0 6px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l1)}
+.tp-due-input:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.tp-due-input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
+.tp-due-input::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer}
+.tp-due-input:hover::-webkit-calendar-picker-indicator{opacity:.9}
+/* The add field's date picker is always visible: it is part of the input line,
+   and a hidden control there would be a feature nobody finds. */
+.tp-add-due{opacity:1;width:auto;min-width:104px;padding:0 4px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l2);height:30px;align-self:flex-start}
+
+/* The badge sits under the text with the finish time. Colour carries urgency:
+   overdue is the error colour, today is the brand accent, the rest stays quiet. */
+.tp-todo-meta{display:flex;align-items:center;gap:10px;min-height:16px}
+.tp-todo-meta:empty{display:none}
+.tp-due{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}
+.tp-due.is-today{color:var(--dsw-alias-brand-primary);font-weight:500}
+.tp-due.is-soon{color:var(--dsw-alias-label-primary)}
+.tp-due.is-overdue{color:var(--dsw-alias-state-error-primary);font-weight:500}
+.tp-due.is-done{color:var(--dsw-alias-label-secondary);opacity:.7}
+.tp-due-rel{font-size:11px}
+.tp-due.is-done .tp-due-date{text-decoration:line-through}
+
+/* --- archive -------------------------------------------------------------- */
+.tp-nav-archive{margin-top:2px}
+.tp-archived-head{padding-top:12px}
+.tp-archived-counts{display:flex;align-items:center;gap:8px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary)}
+.tp-archived-overdue{color:var(--dsw-alias-state-error-primary)}
+/* The archived rows keep the board's layout but not its drag affordances. */
+.tp-row-grip.is-inert{opacity:0;cursor:default}
+.tp-archived .tp-todo:hover{background:var(--dsw-alias-bg-layer-2)}
+
+/* The quiet data-folder line in the footer: one row, one tooltip, no path in
+   sight until it is asked for. */
+.tp-nav-path{display:flex;align-items:center;gap:5px;margin-top:6px;padding:0 2px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:default}
+.tp-nav-path svg{flex:none;opacity:.75}
+.tp-nav-path-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 `;
