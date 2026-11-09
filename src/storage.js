@@ -149,7 +149,21 @@ async function restoreBackup(name) {
   return postJson(RESTORE_URL, { name });
 }
 
-/** Shared POST-to-Host helper for the two backup routes. */
+/**
+ * Remove one manual snapshot from the backups folder.
+ *
+ * Only manual ones: the automatic daily files rotate on their own, and deleting
+ * those from the panel would remove the safety net rather than a copy the user
+ * chose to keep.
+ *
+ * @param {string} name backup file name from `meta.backups`
+ * @returns {Promise<{ ok: boolean, error?: string, meta?: object }>}
+ */
+async function deleteBackup(name) {
+  return postJson(DELETE_BACKUP_URL, { name });
+}
+
+/** Shared POST-to-Host helper for the backup routes. */
 async function postJson(url, body) {
   try {
     const res = await fetch(url, {

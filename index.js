@@ -7,6 +7,7 @@
  *   POST   /api/dsh-todo            -> replace the stored state with the request body
  *   POST   /api/dsh-todo/backup     -> write a manual snapshot now
  *   POST   /api/dsh-todo/restore    -> replace everything from one snapshot
+ *   POST   /api/dsh-todo/delete     -> remove one manual snapshot
  *
  * Every Client change POSTs the full state, so the JSON file on disk is always
  * the current copy. Writes go to a temporary file first and are then renamed,
@@ -26,6 +27,7 @@ export const inject = ['webServer', 'connection'];
 const ROUTE_PATH = '/api/dsh-todo';
 const BACKUP_ROUTE = '/api/dsh-todo/backup';
 const RESTORE_ROUTE = '/api/dsh-todo/restore';
+const DELETE_ROUTE = '/api/dsh-todo/delete';
 const DEFAULT_DIR_NAME = 'dsh-todo';
 const DEFAULT_FILE_NAME = 'dsh-todo.json';
 
@@ -195,6 +197,21 @@ export function apply(ctx, config = {}) {
    * manual name. Overwriting the live file with no way back would make one
    * mis-click cost a week of work.
    */
+  /**
+   * Delete one manual snapshot.
+   *
+   * Manual only. An automatic backup is the safety net for the last 7 days, and
+   * letting the panel delete those would let one tired evening remove the only
+   * copy of something; they expire by rotation instead. Deleting the file that
+   * was just written by a restore's safety step is allowed - it is a manual
+   * backup like any other.
+   */
+  async function deleteManualBackup(name) {
+    if (!MANUAL_NAME.test(name)) throw new Error('unknown backup');
+    await unlink(join(backupDir, name));
+    return { name };
+  }
+
   async function restoreFrom(name) {
     if (!stampOf(name)) throw new Error('unknown backup');
     const text = await readFile(join(backupDir, name), 'utf8');
@@ -344,6 +361,7 @@ export function apply(ctx, config = {}) {
    * POST only, same authentication. The body is JSON:
    *   /backup   {}                      -> { ok, backup, meta }
    *   /restore  { name: "manual-…" }    -> { ok, state, safety, meta }
+   *   /delete   { name: "manual-…" }    -> { ok, name, meta }
    */
   function backupRoute(path, run) {
     return ctx.webServer.register({
@@ -389,9 +407,15 @@ export function apply(ctx, config = {}) {
     if (!name) throw new Error('unknown backup');
     return restoreFrom(name);
   });
+  const disposeDelete = backupRoute(DELETE_ROUTE, async (body) => {
+    const name = typeof body && typeof body.name === 'string' ? body.name : '';
+    if (!name) throw new Error('unknown backup');
+    return deleteManualBackup(name);
+  });
 
   ctx.effect(() => dispose, 'dsh-todo: data route');
   ctx.effect(() => disposeBackup, 'dsh-todo: backup route');
   ctx.effect(() => disposeRestore, 'dsh-todo: restore route');
+  ctx.effect(() => disposeDelete, 'dsh-todo: delete route');
   ctx.logger.info('dsh-todo: data folder ' + dataDir + ' (backups in ' + backupDir + ')');
 }

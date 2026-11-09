@@ -18,6 +18,9 @@ const STATE_URL = '/api/dsh-todo';
 const BACKUP_URL = '/api/dsh-todo/backup';
 const RESTORE_URL = '/api/dsh-todo/restore';
 
+/** Host route that removes one manual snapshot. */
+const DELETE_BACKUP_URL = '/api/dsh-todo/delete';
+
 /** Stable key for the fixed "Default" group (no project). */
 const NO_PROJECT = '__none__';
 
@@ -48,4 +51,4 @@ const EDIT_ROWS = 3;
  * a fix "does not apply" this number says whether the browser got the new code
  * at all. It is a diagnostic, not a release number.
  */
-const BUILD = '2026-11-09.1';
+const BUILD = '2026-11-09.2';

@@ -38,6 +38,9 @@ window.__ModuleLoader__.load({
     const BACKUP_URL = '/api/dsh-todo/backup';
     const RESTORE_URL = '/api/dsh-todo/restore';
 
+    /** Host route that removes one manual snapshot. */
+    const DELETE_BACKUP_URL = '/api/dsh-todo/delete';
+
     /** Stable key for the fixed "Default" group (no project). */
     const NO_PROJECT = '__none__';
 
@@ -68,7 +71,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-09.1';
+    const BUILD = '2026-11-09.2';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -154,6 +157,10 @@ window.__ModuleLoader__.load({
       backupNone: 'No backups yet',
       backupNoneHint: 'Press “Back up now” to create the first one.',
       backupBroken: 'Unreadable file',
+      backupDelete: 'Delete this backup',
+      backupDeleteConfirm: 'Delete',
+      backupDeleting: 'Deleting…',
+      backupDeleted: 'Backup deleted: {name}',
       backupDone: 'Backup created: {name}',
       backupFailed: 'The backup request failed. Check that the service is running.',
       restore: 'Restore',
@@ -300,6 +307,10 @@ window.__ModuleLoader__.load({
       backupNone: '还没有备份',
       backupNoneHint: '点右上角的「立即备份」创建第一份。',
       backupBroken: '文件损坏，无法恢复',
+      backupDelete: '删除这份备份',
+      backupDeleteConfirm: '确认删除',
+      backupDeleting: '删除中…',
+      backupDeleted: '已删除备份：{name}',
       backupDone: '已创建备份：{name}',
       backupFailed: '备份操作失败，请检查服务是否在运行。',
       restore: '恢复',
@@ -518,7 +529,21 @@ window.__ModuleLoader__.load({
       return postJson(RESTORE_URL, { name });
     }
 
-    /** Shared POST-to-Host helper for the two backup routes. */
+    /**
+     * Remove one manual snapshot from the backups folder.
+     *
+     * Only manual ones: the automatic daily files rotate on their own, and deleting
+     * those from the panel would remove the safety net rather than a copy the user
+     * chose to keep.
+     *
+     * @param {string} name backup file name from `meta.backups`
+     * @returns {Promise<{ ok: boolean, error?: string, meta?: object }>}
+     */
+    async function deleteBackup(name) {
+      return postJson(DELETE_BACKUP_URL, { name });
+    }
+
+    /** Shared POST-to-Host helper for the backup routes. */
     async function postJson(url, body) {
       try {
         const res = await fetch(url, {
@@ -988,6 +1013,13 @@ window.__ModuleLoader__.load({
     .tp-backup-name{flex:1;min-width:0;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
     .tp-backup-broken{flex:none;font-size:11px;line-height:16px;color:var(--dsw-alias-state-error-primary)}
     .tp-backup-restore{flex:none}
+    .tp-backup-actions{flex:none;display:inline-flex;align-items:center;gap:4px}
+    /* The confirm pair replaces the row's buttons, so the row has to stay the same
+       height and the two answers have to be the eye-catching part. */
+    .tp-backup-confirm{flex:none;display:inline-flex;align-items:center;gap:4px}
+    .tp-backup-row.is-confirming{border-color:var(--dsw-alias-state-error-primary)}
+    .tp-backup-row.is-confirming .tp-backup-name{color:var(--dsw-alias-label-primary)}
+    .tp-backup-delete{width:26px;height:26px}
     .tp-notice.is-error .tp-notice-close:hover{color:var(--dsw-alias-state-error-primary)}
 
     /* --- deadlines ------------------------------------------------------------
@@ -2724,6 +2756,36 @@ window.__ModuleLoader__.load({
      * moments.
      */
 
+    /** The two buttons a manual row shows when it is asking whether to delete. */
+    function confirmingControls(backup, api) {
+      const { t } = api;
+      return h('span', { className: 'tp-backup-confirm' },
+        h('button', {
+          type: 'button',
+          className: 'tp-btn tp-btn-sm tp-btn-danger',
+          disabled: api.deleting !== null,
+          onClick: () => api.deleteBackupNow(backup),
+        }, api.deleting === backup.name ? t('backupDeleting') : t('backupDeleteConfirm')),
+        h('button', {
+          type: 'button',
+          className: 'tp-btn tp-btn-sm',
+          disabled: api.deleting !== null,
+          onClick: () => api.cancelDeleteBackup(),
+        }, t('cancel')));
+    }
+
+    /** The trash button, which turns the row into a confirmation when pressed. */
+    function deleteControls(backup, api) {
+      return h('button', {
+        type: 'button',
+        className: 'tp-icon-btn tp-backup-delete',
+        title: api.t('backupDelete'),
+        'aria-label': api.t('backupDelete'),
+        disabled: api.deleting !== null,
+        onClick: () => api.askDeleteBackup(backup),
+      }, h(TrashIcon, { size: 13 }));
+    }
+
     /**
      * One backup row: when, which kind, how big, and the restore button.
      *
@@ -2732,10 +2794,12 @@ window.__ModuleLoader__.load({
      */
     function backupRow(backup, api) {
       const { t } = api;
-      const kindLabel = backup.kind === 'manual' ? t('backupKindManual') : t('backupKindAuto');
+      const isManual = backup.kind === 'manual';
+      const kindLabel = isManual ? t('backupKindManual') : t('backupKindAuto');
+      const isAsking = api.confirmingDelete === backup.name;
       return h('li', {
         key: backup.name,
-        className: 'tp-backup-row' + (backup.ok ? '' : ' is-broken'),
+        className: 'tp-backup-row' + (backup.ok ? '' : ' is-broken') + (isAsking ? ' is-confirming' : ''),
       },
         h('span', { className: 'tp-backup-kind is-' + backup.kind }, kindLabel),
         h('span', { className: 'tp-backup-when' }, formatBackupStamp(backup.stamp)),
@@ -2743,13 +2807,22 @@ window.__ModuleLoader__.load({
         backup.ok
           ? null
           : h('span', { className: 'tp-backup-broken' }, t('backupBroken')),
-        h('button', {
-          type: 'button',
-          className: 'tp-btn tp-btn-sm tp-btn-danger tp-backup-restore',
-          disabled: !backup.ok || api.restoring !== null,
-          title: backup.ok ? t('restoreHint') : t('backupBroken'),
-          onClick: () => api.restoreFromBackup(backup),
-        }, api.restoring === backup.name ? t('restoring') : t('restore')));
+        // Asking replaces the row's own buttons instead of opening a dialog: the
+        // question stays next to the file it is about, and only this row changes.
+        isAsking
+          ? confirmingControls(backup, api)
+          : h('span', { className: 'tp-backup-actions' },
+              // Deleting exists only for manual snapshots: the automatic ones rotate
+              // on their own, so a delete button there would be a way to remove the
+              // last week's safety net by accident.
+              isManual ? deleteControls(backup, api) : null,
+              h('button', {
+                type: 'button',
+                className: 'tp-btn tp-btn-sm tp-btn-danger tp-backup-restore',
+                disabled: !backup.ok || api.restoring !== null || api.deleting !== null,
+                title: backup.ok ? t('restoreHint') : t('backupBroken'),
+                onClick: () => api.restoreFromBackup(backup),
+              }, api.restoring === backup.name ? t('restoring') : t('restore'))));
     }
 
     /**
@@ -3019,6 +3092,10 @@ window.__ModuleLoader__.load({
       // The backup page: one snapshot being written, one snapshot being restored.
       const [backingUp, setBackingUp] = React.useState(false);
       const [restoring, setRestoring] = React.useState(null);
+      // One snapshot being removed. Tracked so a second click cannot fire while the
+      // first is in flight and the button can report what it is doing.
+      const [deleting, setDeleting] = React.useState(null);
+      const [confirmingDelete, setConfirmingDelete] = React.useState(null);
 
       // Success notices fade after a few seconds; errors stay until dismissed so a
       // failed import cannot go unnoticed.
@@ -3180,6 +3257,39 @@ window.__ModuleLoader__.load({
           .finally(() => setRestoring(null));
       };
 
+      /**
+       * Remove one manual snapshot.
+       *
+       * Confirmed in place rather than through `window.confirm`: the row can turn
+       * its own buttons into "delete / cancel", which keeps the question next to
+       * the file it is about. The state holds the name of the row being asked
+       * about, so only that row changes.
+       */
+      const askDeleteBackup = (backup) => {
+        if (!backup || deleting !== null) return;
+        setConfirmingDelete(backup.name);
+      };
+
+      const cancelDeleteBackup = () => setConfirmingDelete(null);
+
+      const deleteBackupNow = (backup) => {
+        if (!backup || deleting !== null) return;
+        setDeleting(backup.name);
+        deleteBackup(backup.name)
+          .then((result) => {
+            if (!result.ok) {
+              setNotice({ kind: 'error', text: t(result.error || 'backupFailed') });
+              return;
+            }
+            setState((prev) => ({ ...prev, meta: result.meta }));
+            setNotice({ kind: 'ok', text: t('backupDeleted').replace('{name}', backup.name) });
+          })
+          .finally(() => {
+            setDeleting(null);
+            setConfirmingDelete(null);
+          });
+      };
+
       // --- derived values -------------------------------------------------------
       const groups = groupList(state, t('noProject'));
       const archived = archivedProjects(state);
@@ -3310,6 +3420,7 @@ window.__ModuleLoader__.load({
         addProject,
         exporting, exportData, importing, importFile, syncing, syncNow,
         backingUp, restoring, backupNow, restoreFromBackup,
+        deleting, confirmingDelete, askDeleteBackup, cancelDeleteBackup, deleteBackupNow,
       };
 
       // The title row holds the heading and the search field; search filters the

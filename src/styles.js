@@ -240,6 +240,13 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-backup-name{flex:1;min-width:0;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .tp-backup-broken{flex:none;font-size:11px;line-height:16px;color:var(--dsw-alias-state-error-primary)}
 .tp-backup-restore{flex:none}
+.tp-backup-actions{flex:none;display:inline-flex;align-items:center;gap:4px}
+/* The confirm pair replaces the row's buttons, so the row has to stay the same
+   height and the two answers have to be the eye-catching part. */
+.tp-backup-confirm{flex:none;display:inline-flex;align-items:center;gap:4px}
+.tp-backup-row.is-confirming{border-color:var(--dsw-alias-state-error-primary)}
+.tp-backup-row.is-confirming .tp-backup-name{color:var(--dsw-alias-label-primary)}
+.tp-backup-delete{width:26px;height:26px}
 .tp-notice.is-error .tp-notice-close:hover{color:var(--dsw-alias-state-error-primary)}
 
 /* --- deadlines ------------------------------------------------------------

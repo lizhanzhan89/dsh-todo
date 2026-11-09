@@ -214,6 +214,10 @@ function TodoPage(props) {
   // The backup page: one snapshot being written, one snapshot being restored.
   const [backingUp, setBackingUp] = React.useState(false);
   const [restoring, setRestoring] = React.useState(null);
+  // One snapshot being removed. Tracked so a second click cannot fire while the
+  // first is in flight and the button can report what it is doing.
+  const [deleting, setDeleting] = React.useState(null);
+  const [confirmingDelete, setConfirmingDelete] = React.useState(null);
 
   // Success notices fade after a few seconds; errors stay until dismissed so a
   // failed import cannot go unnoticed.
@@ -375,6 +379,39 @@ function TodoPage(props) {
       .finally(() => setRestoring(null));
   };
 
+  /**
+   * Remove one manual snapshot.
+   *
+   * Confirmed in place rather than through `window.confirm`: the row can turn
+   * its own buttons into "delete / cancel", which keeps the question next to
+   * the file it is about. The state holds the name of the row being asked
+   * about, so only that row changes.
+   */
+  const askDeleteBackup = (backup) => {
+    if (!backup || deleting !== null) return;
+    setConfirmingDelete(backup.name);
+  };
+
+  const cancelDeleteBackup = () => setConfirmingDelete(null);
+
+  const deleteBackupNow = (backup) => {
+    if (!backup || deleting !== null) return;
+    setDeleting(backup.name);
+    deleteBackup(backup.name)
+      .then((result) => {
+        if (!result.ok) {
+          setNotice({ kind: 'error', text: t(result.error || 'backupFailed') });
+          return;
+        }
+        setState((prev) => ({ ...prev, meta: result.meta }));
+        setNotice({ kind: 'ok', text: t('backupDeleted').replace('{name}', backup.name) });
+      })
+      .finally(() => {
+        setDeleting(null);
+        setConfirmingDelete(null);
+      });
+  };
+
   // --- derived values -------------------------------------------------------
   const groups = groupList(state, t('noProject'));
   const archived = archivedProjects(state);
@@ -505,6 +542,7 @@ function TodoPage(props) {
     addProject,
     exporting, exportData, importing, importFile, syncing, syncNow,
     backingUp, restoring, backupNow, restoreFromBackup,
+    deleting, confirmingDelete, askDeleteBackup, cancelDeleteBackup, deleteBackupNow,
   };
 
   // The title row holds the heading and the search field; search filters the

@@ -14,6 +14,36 @@
  * moments.
  */
 
+/** The two buttons a manual row shows when it is asking whether to delete. */
+function confirmingControls(backup, api) {
+  const { t } = api;
+  return h('span', { className: 'tp-backup-confirm' },
+    h('button', {
+      type: 'button',
+      className: 'tp-btn tp-btn-sm tp-btn-danger',
+      disabled: api.deleting !== null,
+      onClick: () => api.deleteBackupNow(backup),
+    }, api.deleting === backup.name ? t('backupDeleting') : t('backupDeleteConfirm')),
+    h('button', {
+      type: 'button',
+      className: 'tp-btn tp-btn-sm',
+      disabled: api.deleting !== null,
+      onClick: () => api.cancelDeleteBackup(),
+    }, t('cancel')));
+}
+
+/** The trash button, which turns the row into a confirmation when pressed. */
+function deleteControls(backup, api) {
+  return h('button', {
+    type: 'button',
+    className: 'tp-icon-btn tp-backup-delete',
+    title: api.t('backupDelete'),
+    'aria-label': api.t('backupDelete'),
+    disabled: api.deleting !== null,
+    onClick: () => api.askDeleteBackup(backup),
+  }, h(TrashIcon, { size: 13 }));
+}
+
 /**
  * One backup row: when, which kind, how big, and the restore button.
  *
@@ -22,10 +52,12 @@
  */
 function backupRow(backup, api) {
   const { t } = api;
-  const kindLabel = backup.kind === 'manual' ? t('backupKindManual') : t('backupKindAuto');
+  const isManual = backup.kind === 'manual';
+  const kindLabel = isManual ? t('backupKindManual') : t('backupKindAuto');
+  const isAsking = api.confirmingDelete === backup.name;
   return h('li', {
     key: backup.name,
-    className: 'tp-backup-row' + (backup.ok ? '' : ' is-broken'),
+    className: 'tp-backup-row' + (backup.ok ? '' : ' is-broken') + (isAsking ? ' is-confirming' : ''),
   },
     h('span', { className: 'tp-backup-kind is-' + backup.kind }, kindLabel),
     h('span', { className: 'tp-backup-when' }, formatBackupStamp(backup.stamp)),
@@ -33,13 +65,22 @@ function backupRow(backup, api) {
     backup.ok
       ? null
       : h('span', { className: 'tp-backup-broken' }, t('backupBroken')),
-    h('button', {
-      type: 'button',
-      className: 'tp-btn tp-btn-sm tp-btn-danger tp-backup-restore',
-      disabled: !backup.ok || api.restoring !== null,
-      title: backup.ok ? t('restoreHint') : t('backupBroken'),
-      onClick: () => api.restoreFromBackup(backup),
-    }, api.restoring === backup.name ? t('restoring') : t('restore')));
+    // Asking replaces the row's own buttons instead of opening a dialog: the
+    // question stays next to the file it is about, and only this row changes.
+    isAsking
+      ? confirmingControls(backup, api)
+      : h('span', { className: 'tp-backup-actions' },
+          // Deleting exists only for manual snapshots: the automatic ones rotate
+          // on their own, so a delete button there would be a way to remove the
+          // last week's safety net by accident.
+          isManual ? deleteControls(backup, api) : null,
+          h('button', {
+            type: 'button',
+            className: 'tp-btn tp-btn-sm tp-btn-danger tp-backup-restore',
+            disabled: !backup.ok || api.restoring !== null || api.deleting !== null,
+            title: backup.ok ? t('restoreHint') : t('backupBroken'),
+            onClick: () => api.restoreFromBackup(backup),
+          }, api.restoring === backup.name ? t('restoring') : t('restore'))));
 }
 
 /**
