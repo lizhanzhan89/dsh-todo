@@ -95,3 +95,7 @@ plugin_manager: remove_bundle  target=@local/dsh-todo
 ```
 
 数据不会跟着删，想清空手动删掉 `~/Documents/dsh-todo/`。
+
+## 许可
+
+[MIT](LICENSE) © 2026 lzz
