@@ -252,10 +252,37 @@ function renderNav(api) {
   // button nobody can press.
   const dragging = dragId !== null;
 
+  // The two cross-project views sit above the recycle bin and read as a pair:
+  // they list things, they do not hold them.
+  const dueOpen = api.dueCount;
+  const dueRow = h('button', {
+    key: '__due__',
+    type: 'button',
+    className: 'tp-nav-item tp-nav-due' + (view === 'due' ? ' is-active' : ''),
+    title: t('dueViewHint'),
+    onClick: () => setView('due'),
+  },
+    h('span', { className: 'tp-nav-trash-icon', 'aria-hidden': true }, h(CalendarIcon, { size: 13 })),
+    h('span', { className: 'tp-nav-name' }, t('dueView')),
+    dueOpen ? h('span', { className: 'tp-nav-count' }, String(dueOpen)) : null);
+
+  const backupRow = h('button', {
+    key: '__backups__',
+    type: 'button',
+    className: 'tp-nav-item tp-nav-backups' + (view === 'backups' ? ' is-active' : ''),
+    title: t('backupPageHint'),
+    onClick: () => setView('backups'),
+  },
+    h('span', { className: 'tp-nav-trash-icon', 'aria-hidden': true }, h(HistoryIcon, { size: 13 })),
+    h('span', { className: 'tp-nav-name' }, t('backups')));
+
   return h('nav', { className: 'tp-nav' + (dragging ? ' is-dragging' : ''), 'aria-label': t('navTitle') },
     h('div', { className: 'tp-nav-head' }, t('navTitle')),
     h('div', { className: 'tp-nav-list' },
       rows,
+      h('div', { className: 'tp-nav-sep', 'aria-hidden': true }),
+      dueRow,
+      backupRow,
       h('button', {
         key: '__trash__',
         type: 'button',

@@ -72,3 +72,21 @@ function shortDate(due) {
   const sameYear = Number(parts[0]) === new Date().getFullYear();
   return sameYear ? parts[1] + '-' + parts[2] : due;
 }
+
+/**
+ * Backup when, from a backup's `stamp`: `2026-11-09 18:30`, time only when it
+ * says so.
+ *
+ * The stamp is a wall-clock string with no zone, exactly as it was on the
+ * machine that wrote it. Formatting it through `Date` would shift it into the
+ * viewer's zone and show the wrong hour, which for a backup is the one number
+ * that matters.
+ */
+function formatBackupStamp(stamp) {
+  if (!stamp) return '';
+  const [date, time] = String(stamp).split('T');
+  const d = String(date || '').split('-');
+  if (d.length !== 3) return String(stamp);
+  const hm = time && time !== '00:00:00' ? ' ' + String(time).slice(0, 5) : '';
+  return d[0] + '/' + d[1] + '/' + d[2] + hm;
+}

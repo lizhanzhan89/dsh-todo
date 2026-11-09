@@ -164,3 +164,18 @@ function CrossIcon({ size = 10 }) {
   return h('svg', { width: size, height: size, viewBox: '0 0 12 12', 'aria-hidden': true },
     h('path', { d: 'M3 3l6 6M9 3l-6 6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }));
 }
+
+/** A floppy-free "save" glyph: an arrow into a tray plus a corner mark. */
+function SaveIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('path', { d: 'M8 2.5v6M5.6 6.1L8 8.5l2.4-2.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+    h('path', { d: 'M3 10.5v1.6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1.6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+}
+
+/** A clock with an arrow running back: "restore to a moment". */
+function HistoryIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('path', { d: 'M3 8a5 5 0 1 0 1.6-3.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
+    h('path', { d: 'M2.4 2.6v3h3', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+    h('path', { d: 'M8 5.6V8l1.9 1.1', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+}

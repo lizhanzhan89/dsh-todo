@@ -52,6 +52,8 @@ function TodoPage(props) {
   const scrollRef = React.useRef(null);
   // Skip the very first save (the empty initial render before the load lands).
   const loadedRef = React.useRef(false);
+  // Set after a restore: the restored state is already the file's content.
+  const skipNextSaveRef = React.useRef(false);
 
   // A pending jump, performed after React has committed the next render.
   // Scrolling straight from the click handler looks up the node too early: when
@@ -73,6 +75,10 @@ function TodoPage(props) {
   // Persist to the Host JSON file on every change after the initial load.
   React.useEffect(() => {
     if (!loadedRef.current) return;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
     // `meta` came from the Host and is not part of the record; posting it back
     // would put a copy of the paths into the data file.
     const { meta, ...record } = state;
@@ -205,6 +211,9 @@ function TodoPage(props) {
   // auto-save in the effect above.
   const [syncing, setSyncing] = React.useState(false);
   const [notice, setNotice] = React.useState(null);
+  // The backup page: one snapshot being written, one snapshot being restored.
+  const [backingUp, setBackingUp] = React.useState(false);
+  const [restoring, setRestoring] = React.useState(null);
 
   // Success notices fade after a few seconds; errors stay until dismissed so a
   // failed import cannot go unnoticed.
@@ -304,9 +313,73 @@ function TodoPage(props) {
   const unarchiveProject = (projectId) => update((prev) => setProjectArchived(prev, projectId, false));
   const setDue = (id, due) => update((prev) => setItemDue(prev, id, due));
 
+  // --- backups --------------------------------------------------------------
+  /**
+   * Write a manual snapshot now.
+   *
+   * The Host copies the file it has on disk, and every change is saved
+   * immediately, so nothing has to be pushed first. It answers with the updated
+   * backup list, which is what makes the new row appear without a reload.
+   */
+  const backupNow = () => {
+    if (backingUp) return;
+    setBackingUp(true);
+    createBackup()
+      .then((result) => {
+        if (!result.ok) {
+          setNotice({ kind: 'error', text: t(result.error || 'backupFailed') });
+          return;
+        }
+        setState((prev) => ({ ...prev, meta: result.meta }));
+        setNotice({ kind: 'ok', text: t('backupDone').replace('{name}', (result.backup && result.backup.name) || '') });
+      })
+      .finally(() => setBackingUp(false));
+  };
+
+  /**
+   * Replace the whole board with one snapshot.
+   *
+   * Confirmed first, because this is the one action in the panel that throws
+   * content away - it is a restore, not the merge that "import" does. The Host
+   * snapshots the current content before overwriting, so the confirmation also
+   * says how to get back.
+   */
+  const restoreFromBackup = (backup) => {
+    if (restoring !== null || !backup) return;
+    const when = formatBackupStamp(backup.stamp) || backup.name;
+    const message = t('restoreConfirm').replace('{when}', when);
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(message)) return;
+    setRestoring(backup.name);
+    restoreBackup(backup.name)
+      .then((result) => {
+        if (!result.ok) {
+          setNotice({ kind: 'error', text: t(result.error || 'backupFailed') });
+          return;
+        }
+        // A restore replaces the record wholesale; `meta` describes the folder,
+        // not the content, so it comes from the response rather than the file.
+        setState({ ...normalizeState(result.state), meta: result.meta });
+        // The restored state is already on disk. Skip the next auto-save so the
+        // panel does not write it straight back: that write would be harmless
+        // but it would also take a "day's first write" snapshot of content the
+        // user did not type. The flag has to be read in the effect, so it is
+        // set here and cleared there.
+        skipNextSaveRef.current = true;
+        setNotice({
+          kind: 'ok',
+          text: t('restoreDone')
+            .replace('{when}', when)
+            .replace('{count}', String((result.state.todos || []).length)),
+        });
+      })
+      .finally(() => setRestoring(null));
+  };
+
   // --- derived values -------------------------------------------------------
   const groups = groupList(state, t('noProject'));
   const archived = archivedProjects(state);
+  // The nav badge for the deadline view counts what the page would list.
+  const dueCount = dueItems(state).length;
   // The flag decides whether finished todos appear in the combined "All" tab
   // and in search results. It is read straight from the state, so the file is
   // the single source of truth and the toggle needs no extra sync.
@@ -418,7 +491,7 @@ function TodoPage(props) {
     setDragId, setDropId, dragId, dropId, setDragOverTrash, dragOverTrash,
     setDragOverArchive, dragOverArchive,
     setDue,
-    archived, archiveProject, unarchiveProject,
+    archived, archiveProject, unarchiveProject, dueCount,
     creatingProject, setCreatingProject, projectDraft, setProjectDraft,
     editingId, editDraft, setEditDraft,
     searching, matches, visibleInSearch,
@@ -431,6 +504,7 @@ function TodoPage(props) {
     itemDragProps, itemDragClass, gripDragProps,
     addProject,
     exporting, exportData, importing, importFile, syncing, syncNow,
+    backingUp, restoring, backupNow, restoreFromBackup,
   };
 
   // The title row holds the heading and the search field; search filters the
@@ -454,7 +528,11 @@ function TodoPage(props) {
 
   // The recycle bin and the archive each replace the board; search filters the
   // board in place.
-  const content = view === 'trash' ? renderTrash(api) : view === 'archive' ? renderArchive(api) : board;
+  const content = view === 'trash' ? renderTrash(api)
+    : view === 'archive' ? renderArchive(api)
+      : view === 'due' ? renderDue(api)
+        : view === 'backups' ? renderBackups(api)
+          : board;
 
   // A short-lived status line for export and import. It sits over the pane so
   // the layout does not jump, and carries its own close button.

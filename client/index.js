@@ -34,6 +34,10 @@ window.__ModuleLoader__.load({
     /** Host route that reads and writes the JSON data file. */
     const STATE_URL = '/api/dsh-todo';
 
+    /** Host routes for the manual snapshot and the full restore. */
+    const BACKUP_URL = '/api/dsh-todo/backup';
+    const RESTORE_URL = '/api/dsh-todo/restore';
+
     /** Stable key for the fixed "Default" group (no project). */
     const NO_PROJECT = '__none__';
 
@@ -64,7 +68,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-06.2';
+    const BUILD = '2026-11-09.1';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -126,6 +130,38 @@ window.__ModuleLoader__.load({
       dragToDeleteNamed: 'Release to delete “{name}”',
       dragToArchive: 'Drop here to archive',
       dragToArchiveNamed: 'Release to archive “{name}”',
+      dueView: 'Deadlines',
+      dueViewHint: 'Every open todo that has a deadline, ordered by date.',
+      dueViewHintCount: '{count} items, {overdue} of them late.',
+      dueViewEmpty: 'No deadlines set',
+      dueViewEmptyHint: 'Use the calendar icon at the end of an open todo to set one.',
+      dueJumpHint: 'Jump to “{name}”',
+      dueGroupOverdue: 'Overdue',
+      dueGroupToday: 'Due today',
+      dueGroupWeek: 'Within a week',
+      dueGroupLater: 'Later',
+      backups: 'Backups',
+      backupPageHint: 'Take a manual snapshot, or restore any snapshot. A restore replaces everything.',
+      backupNow: 'Back up now',
+      backupNowHint: 'Save the current content as a snapshot that never expires.',
+      backingUp: 'Backing up…',
+      backupKindManual: 'Manual',
+      backupKindAuto: 'Auto',
+      backupManual: 'Manual backups',
+      backupManualHint: 'Created when you press the button. Never pruned.',
+      backupAuto: 'Automatic backups',
+      backupAutoHint: 'Written before the first save of each day. The newest {keep} are kept.',
+      backupNone: 'No backups yet',
+      backupNoneHint: 'Press “Back up now” to create the first one.',
+      backupBroken: 'Unreadable file',
+      backupDone: 'Backup created: {name}',
+      backupFailed: 'The backup request failed. Check that the service is running.',
+      restore: 'Restore',
+      restoreHint: 'Replace everything with this snapshot',
+      restoring: 'Restoring…',
+      restoreConfirm: 'Replace everything with the backup from {when}?\n\nThe current content is snapshotted as a manual backup first.',
+      restoreDone: 'Restored from the backup of {when}: {count} items.',
+      restoreMissing: 'That backup file is gone. Refresh the page and try again.',
       archive: 'Archive',
       archiveHint: 'Archived projects leave the board. Their items and completion state are kept. Drag a project row onto the archive zone to move it here.',
       unarchive: 'Unarchive',
@@ -240,6 +276,38 @@ window.__ModuleLoader__.load({
       dragToDeleteNamed: '松开即删除“{name}”',
       dragToArchive: '拖到这里归档',
       dragToArchiveNamed: '松开即归档“{name}”',
+      dueView: '截止日期',
+      dueViewHint: '所有设了截止日期的未完成待办，按日期排序。',
+      dueViewHintCount: '共 {count} 项，其中逾期 {overdue} 项。',
+      dueViewEmpty: '没有设截止日期的待办',
+      dueViewEmptyHint: '在未完成待办的行尾点日历图标就能设一个。',
+      dueJumpHint: '跳到「{name}」',
+      dueGroupOverdue: '已逾期',
+      dueGroupToday: '今天到期',
+      dueGroupWeek: '一周内',
+      dueGroupLater: '更晚',
+      backups: '备份',
+      backupPageHint: '手动留一份快照，或从任意一份快照恢复。恢复会覆盖当前全部内容。',
+      backupNow: '立即备份',
+      backupNowHint: '把当前内容另存为一份不会过期的快照。',
+      backingUp: '备份中…',
+      backupKindManual: '手动',
+      backupKindAuto: '自动',
+      backupManual: '手动备份',
+      backupManualHint: '点击备份时创建，不会自动清理。',
+      backupAuto: '自动备份',
+      backupAutoHint: '每天第一次写入前自动生成，只保留最新 {keep} 份。',
+      backupNone: '还没有备份',
+      backupNoneHint: '点右上角的「立即备份」创建第一份。',
+      backupBroken: '文件损坏，无法恢复',
+      backupDone: '已创建备份：{name}',
+      backupFailed: '备份操作失败，请检查服务是否在运行。',
+      restore: '恢复',
+      restoreHint: '用这份快照覆盖当前全部内容',
+      restoring: '恢复中…',
+      restoreConfirm: '要用 {when} 的备份覆盖当前全部内容吗？\n\n恢复前会自动把现在的内容存成一份手动备份。',
+      restoreDone: '已从 {when} 的备份恢复，共 {count} 个条目。',
+      restoreMissing: '这份备份文件已经不在了，刷新页面再看看。',
       archive: '归档',
       archiveHint: '归档的项目不显示在看板上，条目和完成状态都保留。把导航里的项目行拖到归档区域即可移入。',
       unarchive: '取消归档',
@@ -338,7 +406,7 @@ window.__ModuleLoader__.load({
     }
 
     function emptyMeta() {
-      return { dataDir: '', dataFile: '', backupDir: '' };
+      return { dataDir: '', dataFile: '', backupDir: '', keep: 7, backups: [] };
     }
 
     /**
@@ -352,6 +420,10 @@ window.__ModuleLoader__.load({
         dataDir: typeof meta.dataDir === 'string' ? meta.dataDir : '',
         dataFile: typeof meta.dataFile === 'string' ? meta.dataFile : '',
         backupDir: typeof meta.backupDir === 'string' ? meta.backupDir : '',
+        keep: typeof meta.keep === 'number' ? meta.keep : 7,
+        // `{ name, kind, stamp, ok, size }`, newest first. Anything else in the
+        // folder is not a backup and never reaches the list.
+        backups: Array.isArray(meta.backups) ? meta.backups : [],
       };
     }
 
@@ -416,6 +488,59 @@ window.__ModuleLoader__.load({
         return { ok: true, meta };
       } catch (e) {
         return { ok: false, error: 'syncFailed' };
+      }
+    }
+
+    /**
+     * Ask the Host for a manual snapshot now.
+     *
+     * Unlike the automatic daily one, this never expires: it is the copy to take
+     * before doing something large. The Host copies the file it has on disk, and the
+     * Client saves on every change, so "now" really is now.
+     *
+     * @returns {Promise<{ ok: boolean, error?: string, meta?: object }>}
+     */
+    async function createBackup() {
+      return postJson(BACKUP_URL, {});
+    }
+
+    /**
+     * Replace everything with one snapshot.
+     *
+     * This is the destructive one, on purpose: the client checks with the user and
+     * the Host snapshots the current content first, so the restored state can be
+     * undone by restoring that snapshot.
+     *
+     * @param {string} name backup file name from `meta.backups`
+     * @returns {Promise<{ ok: boolean, error?: string, state?: object, meta?: object }>}
+     */
+    async function restoreBackup(name) {
+      return postJson(RESTORE_URL, { name });
+    }
+
+    /** Shared POST-to-Host helper for the two backup routes. */
+    async function postJson(url, body) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res || !res.ok) {
+          // 404 carries its own key so the panel can say "that file is gone"
+          // instead of the generic failure.
+          return { ok: false, error: res && res.status === 404 ? 'restoreMissing' : 'backupFailed' };
+        }
+        const data = await res.json();
+        return {
+          ok: true,
+          state: data && data.state ? normalizeState(data.state) : null,
+          safety: data && data.safety,
+          backup: data && data.backup,
+          meta: readMeta(data),
+        };
+      } catch (e) {
+        return { ok: false, error: 'backupFailed' };
       }
     }
 
@@ -646,6 +771,10 @@ window.__ModuleLoader__.load({
     .tp-nav.is-dragging .tp-nav-drop{display:flex}
     .tp-nav-drop.is-hot{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
     .tp-nav-drop.trash.is-hot{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
+    /* A hairline between the project rows and the cross-project views: the rows
+       above are groups of items, the three below are ways of looking at all of them. */
+    .tp-nav-sep{height:.5px;margin:6px 4px;background:var(--dsw-alias-border-l1)}
+
     .tp-nav-drop-icon{flex:none;display:inline-flex;align-items:center}
     .tp-nav-drop-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .tp-nav-count{transition:opacity .12s}
@@ -822,6 +951,43 @@ window.__ModuleLoader__.load({
     .tp-notice.is-error{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
     .tp-notice-text{flex:1;min-width:0}
     .tp-notice-close{flex:none}
+
+    /* --- deadline view -------------------------------------------------------
+       A flat list per bucket: date, text, project. It is a view of the whole store
+       rather than a group, so it has no tabs and no add field - the row's own
+       project is the way back to editing it. */
+    .tp-due-section{margin-bottom:18px}
+    .tp-due-section-title{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:0 2px;font-size:12px;font-weight:600;line-height:16px;letter-spacing:.02em;color:var(--dsw-alias-label-secondary)}
+    .tp-due-section-title.is-overdue{color:var(--dsw-alias-state-error-primary)}
+    .tp-due-section-title.is-today{color:var(--dsw-alias-brand-primary)}
+    .tp-due-section-count{font-size:11px;font-weight:400;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-base);border-radius:9px;padding:0 6px;min-width:18px;text-align:center}
+    .tp-due-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+    .tp-due-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+    .tp-due-row:hover{background:var(--dsw-alias-bg-layer-2)}
+    .tp-due-row-date{flex:none;display:inline-flex;align-items:center;gap:5px;min-width:74px;font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary)}
+    .tp-due-row-text{flex:1;min-width:0;font-size:14px;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tp-due-row-project{flex:none;display:inline-flex;align-items:center;gap:4px;max-width:140px;border:0;background:transparent;border-radius:7px;padding:2px 6px;font:inherit;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tp-due-row-project:hover{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
+    .tp-due-row-project svg{flex:none}
+
+    /* --- backup page ---------------------------------------------------------
+       One row per snapshot: kind, when, file name, restore. The manual kind is the
+       accented one because it is the one the user made on purpose. */
+    .tp-backup-note{display:flex;align-items:center;gap:6px;margin:-8px 0 18px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);word-break:break-all}
+    .tp-backup-section{margin-bottom:22px}
+    .tp-backup-section-title{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:13px;font-weight:600;line-height:18px;color:var(--dsw-alias-label-primary)}
+    .tp-backup-section-count{font-size:11px;font-weight:400;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-base);border-radius:9px;padding:0 6px;min-width:18px;text-align:center}
+    .tp-backup-section-hint{margin:0 0 8px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary)}
+    .tp-backup-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+    .tp-backup-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+    .tp-backup-row:hover{background:var(--dsw-alias-bg-layer-2)}
+    .tp-backup-row.is-broken{opacity:.65}
+    .tp-backup-kind{flex:none;font-size:11px;line-height:16px;border-radius:6px;padding:0 6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary)}
+    .tp-backup-kind.is-manual{color:var(--dsw-alias-brand-primary)}
+    .tp-backup-when{flex:none;min-width:132px;font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary)}
+    .tp-backup-name{flex:1;min-width:0;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .tp-backup-broken{flex:none;font-size:11px;line-height:16px;color:var(--dsw-alias-state-error-primary)}
+    .tp-backup-restore{flex:none}
     .tp-notice.is-error .tp-notice-close:hover{color:var(--dsw-alias-state-error-primary)}
 
     /* --- deadlines ------------------------------------------------------------
@@ -1045,6 +1211,21 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M3 3l6 6M9 3l-6 6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }));
     }
 
+    /** A floppy-free "save" glyph: an arrow into a tray plus a corner mark. */
+    function SaveIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('path', { d: 'M8 2.5v6M5.6 6.1L8 8.5l2.4-2.4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M3 10.5v1.6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1.6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+    }
+
+    /** A clock with an arrow running back: "restore to a moment". */
+    function HistoryIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('path', { d: 'M3 8a5 5 0 1 0 1.6-3.7', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
+        h('path', { d: 'M2.4 2.6v3h3', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M8 5.6V8l1.9 1.1', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
     /* ---------------------------------------------------------------------- */
     /* src/format.js                                                          */
     /* ---------------------------------------------------------------------- */
@@ -1121,6 +1302,24 @@ window.__ModuleLoader__.load({
       if (parts.length !== 3) return String(due);
       const sameYear = Number(parts[0]) === new Date().getFullYear();
       return sameYear ? parts[1] + '-' + parts[2] : due;
+    }
+
+    /**
+     * Backup when, from a backup's `stamp`: `2026-11-09 18:30`, time only when it
+     * says so.
+     *
+     * The stamp is a wall-clock string with no zone, exactly as it was on the
+     * machine that wrote it. Formatting it through `Date` would shift it into the
+     * viewer's zone and show the wrong hour, which for a backup is the one number
+     * that matters.
+     */
+    function formatBackupStamp(stamp) {
+      if (!stamp) return '';
+      const [date, time] = String(stamp).split('T');
+      const d = String(date || '').split('-');
+      if (d.length !== 3) return String(stamp);
+      const hm = time && time !== '00:00:00' ? ' ' + String(time).slice(0, 5) : '';
+      return d[0] + '/' + d[1] + '/' + d[2] + hm;
     }
 
     /* ---------------------------------------------------------------------- */
@@ -2106,10 +2305,37 @@ window.__ModuleLoader__.load({
       // button nobody can press.
       const dragging = dragId !== null;
 
+      // The two cross-project views sit above the recycle bin and read as a pair:
+      // they list things, they do not hold them.
+      const dueOpen = api.dueCount;
+      const dueRow = h('button', {
+        key: '__due__',
+        type: 'button',
+        className: 'tp-nav-item tp-nav-due' + (view === 'due' ? ' is-active' : ''),
+        title: t('dueViewHint'),
+        onClick: () => setView('due'),
+      },
+        h('span', { className: 'tp-nav-trash-icon', 'aria-hidden': true }, h(CalendarIcon, { size: 13 })),
+        h('span', { className: 'tp-nav-name' }, t('dueView')),
+        dueOpen ? h('span', { className: 'tp-nav-count' }, String(dueOpen)) : null);
+
+      const backupRow = h('button', {
+        key: '__backups__',
+        type: 'button',
+        className: 'tp-nav-item tp-nav-backups' + (view === 'backups' ? ' is-active' : ''),
+        title: t('backupPageHint'),
+        onClick: () => setView('backups'),
+      },
+        h('span', { className: 'tp-nav-trash-icon', 'aria-hidden': true }, h(HistoryIcon, { size: 13 })),
+        h('span', { className: 'tp-nav-name' }, t('backups')));
+
       return h('nav', { className: 'tp-nav' + (dragging ? ' is-dragging' : ''), 'aria-label': t('navTitle') },
         h('div', { className: 'tp-nav-head' }, t('navTitle')),
         h('div', { className: 'tp-nav-list' },
           rows,
+          h('div', { className: 'tp-nav-sep', 'aria-hidden': true }),
+          dueRow,
+          backupRow,
           h('button', {
             key: '__trash__',
             type: 'button',
@@ -2365,6 +2591,216 @@ window.__ModuleLoader__.load({
     }
 
     /* ---------------------------------------------------------------------- */
+    /* src/components/due.js                                                  */
+    /* ---------------------------------------------------------------------- */
+    /**
+     * The deadline view: every open todo that has a date, from every project, in
+     * one list ordered by that date.
+     *
+     * Why it exists: the board is organised by project, and a deadline cuts across
+     * projects. "What is due this week" cannot be answered by scrolling groups, and
+     * the number that matters (how late is the worst one) is invisible until the
+     * late items are side by side.
+     *
+     * Read-only on purpose. Every row links back to its project, and the edit itself
+     * belongs where the item lives - this page is for looking at the week, not for
+     * retyping what is already on the board.
+     */
+
+    /** Every open todo with a deadline, earliest first. */
+    function dueItems(state) {
+      return state.todos
+        .filter((item) => !isEntry(item) && !item.done && item.due)
+        .sort((a, b) => {
+          if (a.due !== b.due) return a.due < b.due ? -1 : 1;
+          // Same day: keep the board's order so the list is not shuffled by a tie.
+          return state.todos.indexOf(a) - state.todos.indexOf(b);
+        });
+    }
+
+    /**
+     * The groups the list is cut into. Overdue first, then today, then the rest by
+     * day: the top of the page is what hurts.
+     */
+    const DUE_BUCKETS = [
+      { key: 'overdue', label: 'dueGroupOverdue' },
+      { key: 'today', label: 'dueGroupToday' },
+      { key: 'week', label: 'dueGroupWeek' },
+      { key: 'later', label: 'dueGroupLater' },
+    ];
+
+    /** Which bucket a date belongs to. */
+    function bucketOf(due) {
+      const state = dueState(due);
+      if (state === 'overdue') return 'overdue';
+      if (state === 'today') return 'today';
+      const days = daysUntil(due);
+      return days !== null && days <= 7 ? 'week' : 'later';
+    }
+
+    /**
+     * One row: the deadline badge, the text, and the project it belongs to.
+     *
+     * The project name is a link rather than a label, because the first thing a
+     * user does after seeing a late item is go and change it. Clicking it jumps to
+     * that group's board with the item's tab selected.
+     *
+     * @param {object} item  the todo
+     * @param {object} api   page state and transitions
+     */
+    function dueRow(item, api) {
+      const project = item.projectId
+        ? api.state.projects.find((p) => p.id === item.projectId)
+        : null;
+      const projectName = project ? project.name : api.t('noProject');
+
+      return h('li', { key: item.id, className: 'tp-due-row' },
+        h('span', { className: 'tp-due-row-date' }, h(CalendarIcon, { size: 12 }), shortDate(item.due)),
+        h('span', { className: 'tp-due-row-text' }, item.text),
+        h('button', {
+          type: 'button',
+          className: 'tp-due-row-project',
+          title: api.t('dueJumpHint').replace('{name}', projectName),
+          onClick: () => api.jumpToGroup(item.projectId),
+        }, h(FolderIcon, { size: 11 }), projectName));
+    }
+
+    /**
+     * The whole page.
+     *
+     * @param {object} api { t, state, setView }
+     */
+    function renderDue(api) {
+      const { t, state, setView } = api;
+      const items = dueItems(state);
+      const counts = { overdue: 0, today: 0, week: 0, later: 0 };
+      items.forEach((item) => { counts[bucketOf(item.due)] += 1; });
+
+      const sections = DUE_BUCKETS
+        .filter((bucket) => counts[bucket.key] > 0)
+        .map((bucket) => h('section', { key: bucket.key, className: 'tp-due-section' },
+          h('h2', { className: 'tp-due-section-title is-' + bucket.key },
+            t(bucket.label),
+            h('span', { className: 'tp-due-section-count' }, String(counts[bucket.key]))),
+          h('ul', { className: 'tp-due-list' },
+            items.filter((item) => bucketOf(item.due) === bucket.key).map((item) => dueRow(item, api)))));
+
+      return h('div', { className: 'tp-content' },
+        h('header', { className: 'tp-head tp-head-row' },
+          h('div', null,
+            h('h1', null, t('dueView')),
+            h('p', null, items.length
+              ? t('dueViewHintCount')
+                  .replace('{count}', String(items.length))
+                  .replace('{overdue}', String(counts.overdue))
+              : t('dueViewHint'))),
+          h('div', { className: 'tp-head-actions' },
+            h('button', {
+              type: 'button',
+              className: 'tp-btn',
+              onClick: () => setView('board'),
+            }, t('back')))),
+        items.length === 0
+          ? h('div', { className: 'tp-empty' }, h('strong', null, t('dueViewEmpty')), t('dueViewEmptyHint'))
+          : sections);
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /* src/components/backups.js                                              */
+    /* ---------------------------------------------------------------------- */
+    /**
+     * The backup page: take a manual snapshot, and restore any snapshot - automatic
+     * or manual - over the current content.
+     *
+     * Two different verbs live here, and the page keeps them apart on purpose:
+     *
+     *   备份   copies what is on disk. Cheap, safe, no confirmation needed.
+     *   恢复   replaces everything. It is the destructive one: a snapshot of the
+     *          current content is taken first by the Host, but the user still has to
+     *          say yes, because "put it all back" is not something to do by accident.
+     *
+     * This is not the "import" in the sidebar footer: import merges into what is
+     * there, restore replaces it. Both exist because both are wanted at different
+     * moments.
+     */
+
+    /**
+     * One backup row: when, which kind, how big, and the restore button.
+     *
+     * A broken file is shown with its button disabled rather than hidden: the user
+     * should know the file is there and that it cannot be used.
+     */
+    function backupRow(backup, api) {
+      const { t } = api;
+      const kindLabel = backup.kind === 'manual' ? t('backupKindManual') : t('backupKindAuto');
+      return h('li', {
+        key: backup.name,
+        className: 'tp-backup-row' + (backup.ok ? '' : ' is-broken'),
+      },
+        h('span', { className: 'tp-backup-kind is-' + backup.kind }, kindLabel),
+        h('span', { className: 'tp-backup-when' }, formatBackupStamp(backup.stamp)),
+        h('span', { className: 'tp-backup-name', title: backup.name }, backup.name),
+        backup.ok
+          ? null
+          : h('span', { className: 'tp-backup-broken' }, t('backupBroken')),
+        h('button', {
+          type: 'button',
+          className: 'tp-btn tp-btn-sm tp-btn-danger tp-backup-restore',
+          disabled: !backup.ok || api.restoring !== null,
+          title: backup.ok ? t('restoreHint') : t('backupBroken'),
+          onClick: () => api.restoreFromBackup(backup),
+        }, api.restoring === backup.name ? t('restoring') : t('restore')));
+    }
+
+    /**
+     * The whole page.
+     *
+     * @param {object} api { t, state, setView }
+     */
+    function renderBackups(api) {
+      const { t, state, setView } = api;
+      const meta = state.meta || {};
+      const backups = Array.isArray(meta.backups) ? meta.backups : [];
+      const autos = backups.filter((b) => b.kind === 'auto');
+      const manuals = backups.filter((b) => b.kind === 'manual');
+
+      const section = (title, hint, list) => h('section', { className: 'tp-backup-section' },
+        h('h2', { className: 'tp-backup-section-title' }, title,
+          h('span', { className: 'tp-backup-section-count' }, String(list.length))),
+        hint ? h('p', { className: 'tp-backup-section-hint' }, hint) : null,
+        list.length
+          ? h('ul', { className: 'tp-backup-list' }, list.map((backup) => backupRow(backup, api)))
+          : h('div', { className: 'tp-empty' }, h('strong', null, t('backupNone')), t('backupNoneHint')));
+
+      return h('div', { className: 'tp-content' },
+        h('header', { className: 'tp-head tp-head-row' },
+          h('div', null,
+            h('h1', null, t('backups')),
+            h('p', null, t('backupPageHint'))),
+          h('div', { className: 'tp-head-actions' },
+            h('button', {
+              type: 'button',
+              className: 'tp-btn',
+              onClick: () => setView('board'),
+            }, t('back')),
+            h('button', {
+              type: 'button',
+              className: 'tp-btn tp-btn-primary' + (api.backingUp ? ' is-busy' : ''),
+              disabled: api.backingUp,
+              title: t('backupNowHint'),
+              onClick: api.backupNow,
+            }, h(SaveIcon, { size: 13 }), api.backingUp ? t('backingUp') : t('backupNow')))),
+        h('div', { className: 'tp-backup-note' },
+          h(FolderIcon, { size: 12 }),
+          h('span', null, meta.backupDir || '')),
+        section(t('backupManual'), t('backupManualHint'), manuals),
+        section(
+          t('backupAuto'),
+          t('backupAutoHint').replace('{keep}', String(meta.keep || 7)),
+          autos));
+    }
+
+    /* ---------------------------------------------------------------------- */
     /* src/page.js                                                            */
     /* ---------------------------------------------------------------------- */
     /**
@@ -2421,6 +2857,8 @@ window.__ModuleLoader__.load({
       const scrollRef = React.useRef(null);
       // Skip the very first save (the empty initial render before the load lands).
       const loadedRef = React.useRef(false);
+      // Set after a restore: the restored state is already the file's content.
+      const skipNextSaveRef = React.useRef(false);
 
       // A pending jump, performed after React has committed the next render.
       // Scrolling straight from the click handler looks up the node too early: when
@@ -2442,6 +2880,10 @@ window.__ModuleLoader__.load({
       // Persist to the Host JSON file on every change after the initial load.
       React.useEffect(() => {
         if (!loadedRef.current) return;
+        if (skipNextSaveRef.current) {
+          skipNextSaveRef.current = false;
+          return;
+        }
         // `meta` came from the Host and is not part of the record; posting it back
         // would put a copy of the paths into the data file.
         const { meta, ...record } = state;
@@ -2574,6 +3016,9 @@ window.__ModuleLoader__.load({
       // auto-save in the effect above.
       const [syncing, setSyncing] = React.useState(false);
       const [notice, setNotice] = React.useState(null);
+      // The backup page: one snapshot being written, one snapshot being restored.
+      const [backingUp, setBackingUp] = React.useState(false);
+      const [restoring, setRestoring] = React.useState(null);
 
       // Success notices fade after a few seconds; errors stay until dismissed so a
       // failed import cannot go unnoticed.
@@ -2673,9 +3118,73 @@ window.__ModuleLoader__.load({
       const unarchiveProject = (projectId) => update((prev) => setProjectArchived(prev, projectId, false));
       const setDue = (id, due) => update((prev) => setItemDue(prev, id, due));
 
+      // --- backups --------------------------------------------------------------
+      /**
+       * Write a manual snapshot now.
+       *
+       * The Host copies the file it has on disk, and every change is saved
+       * immediately, so nothing has to be pushed first. It answers with the updated
+       * backup list, which is what makes the new row appear without a reload.
+       */
+      const backupNow = () => {
+        if (backingUp) return;
+        setBackingUp(true);
+        createBackup()
+          .then((result) => {
+            if (!result.ok) {
+              setNotice({ kind: 'error', text: t(result.error || 'backupFailed') });
+              return;
+            }
+            setState((prev) => ({ ...prev, meta: result.meta }));
+            setNotice({ kind: 'ok', text: t('backupDone').replace('{name}', (result.backup && result.backup.name) || '') });
+          })
+          .finally(() => setBackingUp(false));
+      };
+
+      /**
+       * Replace the whole board with one snapshot.
+       *
+       * Confirmed first, because this is the one action in the panel that throws
+       * content away - it is a restore, not the merge that "import" does. The Host
+       * snapshots the current content before overwriting, so the confirmation also
+       * says how to get back.
+       */
+      const restoreFromBackup = (backup) => {
+        if (restoring !== null || !backup) return;
+        const when = formatBackupStamp(backup.stamp) || backup.name;
+        const message = t('restoreConfirm').replace('{when}', when);
+        if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(message)) return;
+        setRestoring(backup.name);
+        restoreBackup(backup.name)
+          .then((result) => {
+            if (!result.ok) {
+              setNotice({ kind: 'error', text: t(result.error || 'backupFailed') });
+              return;
+            }
+            // A restore replaces the record wholesale; `meta` describes the folder,
+            // not the content, so it comes from the response rather than the file.
+            setState({ ...normalizeState(result.state), meta: result.meta });
+            // The restored state is already on disk. Skip the next auto-save so the
+            // panel does not write it straight back: that write would be harmless
+            // but it would also take a "day's first write" snapshot of content the
+            // user did not type. The flag has to be read in the effect, so it is
+            // set here and cleared there.
+            skipNextSaveRef.current = true;
+            setNotice({
+              kind: 'ok',
+              text: t('restoreDone')
+                .replace('{when}', when)
+                .replace('{count}', String((result.state.todos || []).length)),
+            });
+          })
+          .finally(() => setRestoring(null));
+      };
+
       // --- derived values -------------------------------------------------------
       const groups = groupList(state, t('noProject'));
       const archived = archivedProjects(state);
+      // The nav badge for the deadline view counts what the page would list.
+      const dueCount = dueItems(state).length;
       // The flag decides whether finished todos appear in the combined "All" tab
       // and in search results. It is read straight from the state, so the file is
       // the single source of truth and the toggle needs no extra sync.
@@ -2787,7 +3296,7 @@ window.__ModuleLoader__.load({
         setDragId, setDropId, dragId, dropId, setDragOverTrash, dragOverTrash,
         setDragOverArchive, dragOverArchive,
         setDue,
-        archived, archiveProject, unarchiveProject,
+        archived, archiveProject, unarchiveProject, dueCount,
         creatingProject, setCreatingProject, projectDraft, setProjectDraft,
         editingId, editDraft, setEditDraft,
         searching, matches, visibleInSearch,
@@ -2800,6 +3309,7 @@ window.__ModuleLoader__.load({
         itemDragProps, itemDragClass, gripDragProps,
         addProject,
         exporting, exportData, importing, importFile, syncing, syncNow,
+        backingUp, restoring, backupNow, restoreFromBackup,
       };
 
       // The title row holds the heading and the search field; search filters the
@@ -2823,7 +3333,11 @@ window.__ModuleLoader__.load({
 
       // The recycle bin and the archive each replace the board; search filters the
       // board in place.
-      const content = view === 'trash' ? renderTrash(api) : view === 'archive' ? renderArchive(api) : board;
+      const content = view === 'trash' ? renderTrash(api)
+        : view === 'archive' ? renderArchive(api)
+          : view === 'due' ? renderDue(api)
+            : view === 'backups' ? renderBackups(api)
+              : board;
 
       // A short-lived status line for export and import. It sits over the pane so
       // the layout does not jump, and carries its own close button.

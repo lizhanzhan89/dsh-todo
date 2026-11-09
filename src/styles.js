@@ -23,6 +23,10 @@ const CSS = `
 .tp-nav.is-dragging .tp-nav-drop{display:flex}
 .tp-nav-drop.is-hot{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 .tp-nav-drop.trash.is-hot{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
+/* A hairline between the project rows and the cross-project views: the rows
+   above are groups of items, the three below are ways of looking at all of them. */
+.tp-nav-sep{height:.5px;margin:6px 4px;background:var(--dsw-alias-border-l1)}
+
 .tp-nav-drop-icon{flex:none;display:inline-flex;align-items:center}
 .tp-nav-drop-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tp-nav-count{transition:opacity .12s}
@@ -199,6 +203,43 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-notice.is-error{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
 .tp-notice-text{flex:1;min-width:0}
 .tp-notice-close{flex:none}
+
+/* --- deadline view -------------------------------------------------------
+   A flat list per bucket: date, text, project. It is a view of the whole store
+   rather than a group, so it has no tabs and no add field - the row's own
+   project is the way back to editing it. */
+.tp-due-section{margin-bottom:18px}
+.tp-due-section-title{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:0 2px;font-size:12px;font-weight:600;line-height:16px;letter-spacing:.02em;color:var(--dsw-alias-label-secondary)}
+.tp-due-section-title.is-overdue{color:var(--dsw-alias-state-error-primary)}
+.tp-due-section-title.is-today{color:var(--dsw-alias-brand-primary)}
+.tp-due-section-count{font-size:11px;font-weight:400;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-base);border-radius:9px;padding:0 6px;min-width:18px;text-align:center}
+.tp-due-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.tp-due-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+.tp-due-row:hover{background:var(--dsw-alias-bg-layer-2)}
+.tp-due-row-date{flex:none;display:inline-flex;align-items:center;gap:5px;min-width:74px;font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary)}
+.tp-due-row-text{flex:1;min-width:0;font-size:14px;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-due-row-project{flex:none;display:inline-flex;align-items:center;gap:4px;max-width:140px;border:0;background:transparent;border-radius:7px;padding:2px 6px;font:inherit;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-due-row-project:hover{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
+.tp-due-row-project svg{flex:none}
+
+/* --- backup page ---------------------------------------------------------
+   One row per snapshot: kind, when, file name, restore. The manual kind is the
+   accented one because it is the one the user made on purpose. */
+.tp-backup-note{display:flex;align-items:center;gap:6px;margin:-8px 0 18px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);word-break:break-all}
+.tp-backup-section{margin-bottom:22px}
+.tp-backup-section-title{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:13px;font-weight:600;line-height:18px;color:var(--dsw-alias-label-primary)}
+.tp-backup-section-count{font-size:11px;font-weight:400;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-base);border-radius:9px;padding:0 6px;min-width:18px;text-align:center}
+.tp-backup-section-hint{margin:0 0 8px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary)}
+.tp-backup-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.tp-backup-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+.tp-backup-row:hover{background:var(--dsw-alias-bg-layer-2)}
+.tp-backup-row.is-broken{opacity:.65}
+.tp-backup-kind{flex:none;font-size:11px;line-height:16px;border-radius:6px;padding:0 6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary)}
+.tp-backup-kind.is-manual{color:var(--dsw-alias-brand-primary)}
+.tp-backup-when{flex:none;min-width:132px;font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary)}
+.tp-backup-name{flex:1;min-width:0;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.tp-backup-broken{flex:none;font-size:11px;line-height:16px;color:var(--dsw-alias-state-error-primary)}
+.tp-backup-restore{flex:none}
 .tp-notice.is-error .tp-notice-close:hover{color:var(--dsw-alias-state-error-primary)}
 
 /* --- deadlines ------------------------------------------------------------

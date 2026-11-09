@@ -37,7 +37,7 @@ function normalizeState(parsed) {
 }
 
 function emptyMeta() {
-  return { dataDir: '', dataFile: '', backupDir: '' };
+  return { dataDir: '', dataFile: '', backupDir: '', keep: 7, backups: [] };
 }
 
 /**
@@ -51,6 +51,10 @@ function readMeta(data) {
     dataDir: typeof meta.dataDir === 'string' ? meta.dataDir : '',
     dataFile: typeof meta.dataFile === 'string' ? meta.dataFile : '',
     backupDir: typeof meta.backupDir === 'string' ? meta.backupDir : '',
+    keep: typeof meta.keep === 'number' ? meta.keep : 7,
+    // `{ name, kind, stamp, ok, size }`, newest first. Anything else in the
+    // folder is not a backup and never reaches the list.
+    backups: Array.isArray(meta.backups) ? meta.backups : [],
   };
 }
 
@@ -115,5 +119,58 @@ async function syncState(state) {
     return { ok: true, meta };
   } catch (e) {
     return { ok: false, error: 'syncFailed' };
+  }
+}
+
+/**
+ * Ask the Host for a manual snapshot now.
+ *
+ * Unlike the automatic daily one, this never expires: it is the copy to take
+ * before doing something large. The Host copies the file it has on disk, and the
+ * Client saves on every change, so "now" really is now.
+ *
+ * @returns {Promise<{ ok: boolean, error?: string, meta?: object }>}
+ */
+async function createBackup() {
+  return postJson(BACKUP_URL, {});
+}
+
+/**
+ * Replace everything with one snapshot.
+ *
+ * This is the destructive one, on purpose: the client checks with the user and
+ * the Host snapshots the current content first, so the restored state can be
+ * undone by restoring that snapshot.
+ *
+ * @param {string} name backup file name from `meta.backups`
+ * @returns {Promise<{ ok: boolean, error?: string, state?: object, meta?: object }>}
+ */
+async function restoreBackup(name) {
+  return postJson(RESTORE_URL, { name });
+}
+
+/** Shared POST-to-Host helper for the two backup routes. */
+async function postJson(url, body) {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res || !res.ok) {
+      // 404 carries its own key so the panel can say "that file is gone"
+      // instead of the generic failure.
+      return { ok: false, error: res && res.status === 404 ? 'restoreMissing' : 'backupFailed' };
+    }
+    const data = await res.json();
+    return {
+      ok: true,
+      state: data && data.state ? normalizeState(data.state) : null,
+      safety: data && data.safety,
+      backup: data && data.backup,
+      meta: readMeta(data),
+    };
+  } catch (e) {
+    return { ok: false, error: 'backupFailed' };
   }
 }

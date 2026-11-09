@@ -38,6 +38,8 @@ const SOURCES = [
   'src/components/search.js',
   'src/components/trash.js',
   'src/components/archive.js',
+  'src/components/due.js',
+  'src/components/backups.js',
   'src/page.js',
   'src/plugin.js',
 ];

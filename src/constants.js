@@ -14,6 +14,10 @@ const PANEL_ORDER = 20;
 /** Host route that reads and writes the JSON data file. */
 const STATE_URL = '/api/dsh-todo';
 
+/** Host routes for the manual snapshot and the full restore. */
+const BACKUP_URL = '/api/dsh-todo/backup';
+const RESTORE_URL = '/api/dsh-todo/restore';
+
 /** Stable key for the fixed "Default" group (no project). */
 const NO_PROJECT = '__none__';
 
@@ -44,4 +48,4 @@ const EDIT_ROWS = 3;
  * a fix "does not apply" this number says whether the browser got the new code
  * at all. It is a diagnostic, not a release number.
  */
-const BUILD = '2026-11-06.2';
+const BUILD = '2026-11-09.1';
