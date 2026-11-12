@@ -222,14 +222,9 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-due-row-project:hover{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
 .tp-due-row-project svg{flex:none}
 /* The undated block: a quieter heading and a dashed left edge, so it reads as
-   "these have no date" rather than as another deadline bucket. Inside it the
-   items are cut up by project, using the board's own order, so each project
-   gets a small label the way the home view does. */
+   "these have no date" rather than as another deadline bucket. */
 .tp-due-section-none{margin-top:22px}
 .tp-due-section-title.is-none{color:var(--dsw-alias-label-secondary);opacity:.85}
-.tp-due-undated-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
-.tp-due-undated-title{margin:0 0 2px;padding:0 2px;font-size:12px;font-weight:600;line-height:16px;letter-spacing:.02em;color:var(--dsw-alias-label-secondary)}
-.tp-due-undated-title::before{content:"·";margin-right:6px;color:var(--dsw-alias-brand-primary);opacity:.7}
 .tp-due-row.is-undated{border-style:dashed}
 .tp-due-row-nodate{display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary);opacity:.6}
 

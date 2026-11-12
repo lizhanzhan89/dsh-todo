@@ -79,7 +79,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-12.2';
+    const BUILD = '2026-11-12.3';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -1011,14 +1011,9 @@ window.__ModuleLoader__.load({
     .tp-due-row-project:hover{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
     .tp-due-row-project svg{flex:none}
     /* The undated block: a quieter heading and a dashed left edge, so it reads as
-       "these have no date" rather than as another deadline bucket. Inside it the
-       items are cut up by project, using the board's own order, so each project
-       gets a small label the way the home view does. */
+       "these have no date" rather than as another deadline bucket. */
     .tp-due-section-none{margin-top:22px}
     .tp-due-section-title.is-none{color:var(--dsw-alias-label-secondary);opacity:.85}
-    .tp-due-undated-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
-    .tp-due-undated-title{margin:0 0 2px;padding:0 2px;font-size:12px;font-weight:600;line-height:16px;letter-spacing:.02em;color:var(--dsw-alias-label-secondary)}
-    .tp-due-undated-title::before{content:"·";margin-right:6px;color:var(--dsw-alias-brand-primary);opacity:.7}
     .tp-due-row.is-undated{border-style:dashed}
     .tp-due-row-nodate{display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary);opacity:.6}
 
@@ -2733,30 +2728,20 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Every open todo with no deadline, in board order. They sit at the bottom of
+     * The undated items in board order, as one flat list. They sit at the bottom of
      * the page under their own heading: a todo that never got a date is the one
      * most likely to be forgotten, and a page that answers "what is due" should also
      * show what has quietly escaped being due at all.
+     *
+     * The order matches the board (default group first, then each live project in
+     * stored order, items in board order) so the list does not feel shuffled; only
+     * the project labels are dropped, keeping the block as a single quiet list.
      */
-    function undatedItems(state) {
-      return state.todos.filter((item) => !isEntry(item) && !item.done && !item.due);
-    }
-
-    /**
-     * The undated items cut up by project, in exactly the order the board shows
-     * them: the default group first, then each live project in its stored order,
-     * and within a project the items in board order. The two lists disagree
-     * otherwise (the due page is date-first, the board is project-first), and a
-     * "no date" list that shuffled the projects would make the page feel out of
-     * sync with the home view.
-     */
-    function undatedGroups(state, defaultName) {
-      return groupList(state, defaultName)
-        .map((group) => ({
-          group,
-          items: undatedItems(state).filter((item) => projectIdOf(item) === group.id),
-        }))
-        .filter((entry) => entry.items.length > 0);
+    function undatedItems(state, defaultName) {
+      return groupList(state, defaultName).flatMap((group) =>
+        state.todos.filter(
+          (item) => !isEntry(item) && !item.done && !item.due && projectIdOf(item) === group.id,
+        ));
     }
 
     /**
@@ -2831,23 +2816,18 @@ window.__ModuleLoader__.load({
 
       // The undated block always comes last, and only when there is something in it:
       // an empty "no due date" heading would just be noise under a healthy list.
-      // It is cut up by project (default group first, then each live project in
-      // board order), because the board is project-first and a "no date" list that
-      // shuffled the projects would feel out of sync with the home view.
-      const undatedEntries = undatedGroups(state, t('noProject'));
-      const undatedSection = undatedEntries.length
+      // It is a single flat list ordered like the board (default group first, then
+      // each live project in stored order), but without per-project labels.
+      const undated = undatedItems(state, t('noProject'));
+      const undatedSection = undated.length
         ? h('section', { key: 'none', className: 'tp-due-section tp-due-section-none' },
             h('h2', { className: 'tp-due-section-title is-none' },
               t('dueGroupNone'),
-              h('span', { className: 'tp-due-section-count' },
-                String(undatedEntries.reduce((sum, entry) => sum + entry.items.length, 0)))),
-            undatedEntries.map((entry) =>
-              h('div', { key: entry.group.id ?? NO_PROJECT, className: 'tp-due-undated-group' },
-                h('h3', { className: 'tp-due-undated-title' }, entry.group.name),
-                h('ul', { className: 'tp-due-list' }, entry.items.map((item) => dueRow(item, api))))))
+              h('span', { className: 'tp-due-section-count' }, String(undated.length))),
+            h('ul', { className: 'tp-due-list' }, undated.map((item) => dueRow(item, api))))
         : null;
 
-      const total = items.length + undatedItems(state).length;
+      const total = items.length + undated.length;
 
       return h('div', { className: 'tp-content' },
         h('header', { className: 'tp-head tp-head-row' },
