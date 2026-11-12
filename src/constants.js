@@ -46,9 +46,17 @@ const KIND_ENTRY = 'entry';
 const EDIT_ROWS = 3;
 
 /**
+ * Rows a single page of a group tab holds. A group that has grown past this is
+ * paged rather than scrolled: a tab of forty finished todos pushes every other
+ * project off the screen, and the four tab counts stop meaning anything once
+ * the list under them is a wall. Ten is about what fits above the fold.
+ */
+const PAGE_SIZE = 10;
+
+/**
  * Build stamp shown next to the panel title. Bump it on every shipped change:
  * the panel is served as an immutable bundle picked by file metadata, so when
  * a fix "does not apply" this number says whether the browser got the new code
  * at all. It is a diagnostic, not a release number.
  */
-const BUILD = '2026-11-09.2';
+const BUILD = '2026-11-12.1';

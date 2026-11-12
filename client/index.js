@@ -66,12 +66,20 @@ window.__ModuleLoader__.load({
     const EDIT_ROWS = 3;
 
     /**
+     * Rows a single page of a group tab holds. A group that has grown past this is
+     * paged rather than scrolled: a tab of forty finished todos pushes every other
+     * project off the screen, and the four tab counts stop meaning anything once
+     * the list under them is a wall. Ten is about what fits above the fold.
+     */
+    const PAGE_SIZE = 10;
+
+    /**
      * Build stamp shown next to the panel title. Bump it on every shipped change:
      * the panel is served as an immutable bundle picked by file metadata, so when
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-09.2';
+    const BUILD = '2026-11-12.1';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -143,6 +151,10 @@ window.__ModuleLoader__.load({
       dueGroupToday: 'Due today',
       dueGroupWeek: 'Within a week',
       dueGroupLater: 'Later',
+      dueGroupNone: 'No due date',
+      pagePrev: 'Previous page',
+      pageNext: 'Next page',
+      pageOf: 'Page {page} of {pages}',
       backups: 'Backups',
       backupPageHint: 'Take a manual snapshot, or restore any snapshot. A restore replaces everything.',
       backupNow: 'Back up now',
@@ -293,6 +305,10 @@ window.__ModuleLoader__.load({
       dueGroupToday: '今天到期',
       dueGroupWeek: '一周内',
       dueGroupLater: '更晚',
+      dueGroupNone: '未设截止日期',
+      pagePrev: '上一页',
+      pageNext: '下一页',
+      pageOf: '第 {page} / {pages} 页',
       backups: '备份',
       backupPageHint: '手动留一份快照，或从任意一份快照恢复。恢复会覆盖当前全部内容。',
       backupNow: '立即备份',
@@ -994,6 +1010,21 @@ window.__ModuleLoader__.load({
     .tp-due-row-project{flex:none;display:inline-flex;align-items:center;gap:4px;max-width:140px;border:0;background:transparent;border-radius:7px;padding:2px 6px;font:inherit;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .tp-due-row-project:hover{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
     .tp-due-row-project svg{flex:none}
+    /* The undated block: a quieter heading and a dashed left edge, so it reads as
+       "these have no date" rather than as another deadline bucket. */
+    .tp-due-section-none{margin-top:22px}
+    .tp-due-section-title.is-none{color:var(--dsw-alias-label-secondary);opacity:.85}
+    .tp-due-row.is-undated{border-style:dashed}
+    .tp-due-row-nodate{display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary);opacity:.6}
+
+    /* --- pagination ----------------------------------------------------------
+       A tab with more rows than PAGE_SIZE is cut into pages; this strip sits under
+       the list. Kept to the left so it never competes with the add controls above. */
+    .tp-pager{display:flex;align-items:center;gap:6px;margin-top:8px;padding:0 2px}
+    .tp-pager-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:.5px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);cursor:pointer}
+    .tp-pager-btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+    .tp-pager-btn:disabled{opacity:.35;cursor:default}
+    .tp-pager-info{font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary)}
 
     /* --- backup page ---------------------------------------------------------
        One row per snapshot: kind, when, file name, restore. The manual kind is the
@@ -1089,6 +1120,16 @@ window.__ModuleLoader__.load({
     function PlusIcon({ size = 13 }) {
       return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
         h('path', { d: 'M8 3v10M3 8h10', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' }));
+    }
+
+    function ChevronLeftIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('path', { d: 'M10 3.5L5.5 8 10 12.5', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
+    function ChevronRightIcon({ size = 13 }) {
+      return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+        h('path', { d: 'M6 3.5L10.5 8 6 12.5', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' }));
     }
 
     function TrashIcon({ size = 14 }) {
@@ -1997,7 +2038,6 @@ window.__ModuleLoader__.load({
       const emptyBlock = shown.length === 0 && !groupHit
         ? h('div', { className: 'tp-empty' }, h('strong', null, emptyTitle), emptyHint)
         : null;
-
       // The "All" tab hides finished todos through this toggle rather than through
       // the global search switch: they are separate questions ("show the archive
       // here" vs "match the archive too").
@@ -2057,6 +2097,40 @@ window.__ModuleLoader__.load({
       // Only the combined tab mixes kinds, so only there does a row need a badge.
       const rowOptions = { withKind: isAllTab && !api.searching };
 
+      // --- paging ---------------------------------------------------------------
+      // Search results are cut too: a search that matches two hundred rows is the
+      // same wall as a long tab. The page key carries the group id so moving to
+      // another project does not inherit the previous one's page number, while the
+      // same group's other tabs each keep their own.
+      const pageKey = groupKey(group.id) + ':' + (api.searching ? 'search' : tab);
+      const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+      const page = Math.min(api.pageFor(pageKey), pageCount - 1);
+      const offset = page * PAGE_SIZE;
+      const pageRows = pageCount > 1 ? shown.slice(offset, offset + PAGE_SIZE) : shown;
+      const pager = pageCount > 1
+        ? h('div', { className: 'tp-pager' },
+            h('button', {
+              type: 'button',
+              className: 'tp-pager-btn',
+              disabled: page === 0,
+              title: t('pagePrev'),
+              'aria-label': t('pagePrev'),
+              onClick: () => api.setPageFor(pageKey, page - 1),
+            }, h(ChevronLeftIcon, { size: 13 })),
+            h('span', { className: 'tp-pager-info' },
+              t('pageOf')
+                .replace('{page}', String(page + 1))
+                .replace('{pages}', String(pageCount))),
+            h('button', {
+              type: 'button',
+              className: 'tp-pager-btn',
+              disabled: page >= pageCount - 1,
+              title: t('pageNext'),
+              'aria-label': t('pageNext'),
+              onClick: () => api.setPageFor(pageKey, page + 1),
+            }, h(ChevronRightIcon, { size: 13 })))
+        : null;
+
       return h('section', { key: groupKey(group.id), id: groupAnchor(group.id), className: 'tp-group' },
         // One header row, three columns: tabs on the left, the project name in the
         // middle, the add controls on the right (when the tab has them).
@@ -2076,7 +2150,8 @@ window.__ModuleLoader__.load({
         doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
         h('div', { className: 'tp-group-body' },
           h('ul', { className: 'tp-todos' + (isAllTab ? ' is-mixed' : '') },
-            shown.map((item) => renderRow(item, api, rowOptions))),
+            pageRows.map((item) => renderRow(item, api, rowOptions))),
+          pager,
           emptyBlock));
     }
 
@@ -2639,7 +2714,9 @@ window.__ModuleLoader__.load({
      * retyping what is already on the board.
      */
 
-    /** Every open todo with a deadline, earliest first. */
+    /**
+     * Every open todo with a deadline, earliest first.
+     */
     function dueItems(state) {
       return state.todos
         .filter((item) => !isEntry(item) && !item.done && item.due)
@@ -2648,6 +2725,16 @@ window.__ModuleLoader__.load({
           // Same day: keep the board's order so the list is not shuffled by a tie.
           return state.todos.indexOf(a) - state.todos.indexOf(b);
         });
+    }
+
+    /**
+     * Every open todo with no deadline, in board order. They sit at the bottom of
+     * the page under their own heading: a todo that never got a date is the one
+     * most likely to be forgotten, and a page that answers "what is due" should also
+     * show what has quietly escaped being due at all.
+     */
+    function undatedItems(state) {
+      return state.todos.filter((item) => !isEntry(item) && !item.done && !item.due);
     }
 
     /**
@@ -2686,8 +2773,11 @@ window.__ModuleLoader__.load({
         : null;
       const projectName = project ? project.name : api.t('noProject');
 
-      return h('li', { key: item.id, className: 'tp-due-row' },
-        h('span', { className: 'tp-due-row-date' }, h(CalendarIcon, { size: 12 }), shortDate(item.due)),
+      return h('li', { key: item.id, className: 'tp-due-row' + (item.due ? '' : ' is-undated') },
+        h('span', { className: 'tp-due-row-date' },
+          item.due
+            ? [h(CalendarIcon, { key: 'i', size: 12 }), shortDate(item.due)]
+            : h('span', { className: 'tp-due-row-nodate' }, h(CalendarIcon, { size: 12 }))),
         h('span', { className: 'tp-due-row-text' }, item.text),
         h('button', {
           type: 'button',
@@ -2705,6 +2795,7 @@ window.__ModuleLoader__.load({
     function renderDue(api) {
       const { t, state, setView } = api;
       const items = dueItems(state);
+      const undated = undatedItems(state);
       const counts = { overdue: 0, today: 0, week: 0, later: 0 };
       items.forEach((item) => { counts[bucketOf(item.due)] += 1; });
 
@@ -2716,6 +2807,18 @@ window.__ModuleLoader__.load({
             h('span', { className: 'tp-due-section-count' }, String(counts[bucket.key]))),
           h('ul', { className: 'tp-due-list' },
             items.filter((item) => bucketOf(item.due) === bucket.key).map((item) => dueRow(item, api)))));
+
+      // The undated block always comes last, and only when there is something in it:
+      // an empty "no due date" heading would just be noise under a healthy list.
+      const undatedSection = undated.length
+        ? h('section', { key: 'none', className: 'tp-due-section tp-due-section-none' },
+            h('h2', { className: 'tp-due-section-title is-none' },
+              t('dueGroupNone'),
+              h('span', { className: 'tp-due-section-count' }, String(undated.length))),
+            h('ul', { className: 'tp-due-list' }, undated.map((item) => dueRow(item, api))))
+        : null;
+
+      const total = items.length + undated.length;
 
       return h('div', { className: 'tp-content' },
         h('header', { className: 'tp-head tp-head-row' },
@@ -2732,9 +2835,9 @@ window.__ModuleLoader__.load({
               className: 'tp-btn',
               onClick: () => setView('board'),
             }, t('back')))),
-        items.length === 0
+        total === 0
           ? h('div', { className: 'tp-empty' }, h('strong', null, t('dueViewEmpty')), t('dueViewEmptyHint'))
-          : sections);
+          : h('div', null, sections, undatedSection));
     }
 
     /* ---------------------------------------------------------------------- */
@@ -3089,6 +3192,16 @@ window.__ModuleLoader__.load({
       // auto-save in the effect above.
       const [syncing, setSyncing] = React.useState(false);
       const [notice, setNotice] = React.useState(null);
+
+      // --- pagination -----------------------------------------------------------
+      // A tab that holds a pile of rows is cut into pages of PAGE_SIZE. The page is
+      // remembered per tab, not per group, so moving between projects keeps the
+      // reader in the same depth of the list. Kept in React state (not the data
+      // file): which page you are looking at is a view position, not content.
+      const [pages, setPages] = React.useState({});
+      const pageFor = (tabKey) => pages[tabKey] || 0;
+      const setPageFor = (tabKey, value) =>
+        setPages((prev) => (prev[tabKey] === value ? prev : { ...prev, [tabKey]: value }));
       // The backup page: one snapshot being written, one snapshot being restored.
       const [backingUp, setBackingUp] = React.useState(false);
       const [restoring, setRestoring] = React.useState(null);
@@ -3411,6 +3524,7 @@ window.__ModuleLoader__.load({
         editingId, editDraft, setEditDraft,
         searching, matches, visibleInSearch,
         tabFor, setTabFor, draftFor, setDraftFor, groupAnchor,
+        pageFor, setPageFor,
         addTodo, addNote, jumpToGroup, reorderProject: reorderProjects,
         removeTodo, removeProject, restoreRecord: restore,
         deleteForever: deleteForeverRecord, emptyTrash: emptyAll,

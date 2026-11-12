@@ -221,6 +221,21 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-due-row-project{flex:none;display:inline-flex;align-items:center;gap:4px;max-width:140px;border:0;background:transparent;border-radius:7px;padding:2px 6px;font:inherit;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tp-due-row-project:hover{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
 .tp-due-row-project svg{flex:none}
+/* The undated block: a quieter heading and a dashed left edge, so it reads as
+   "these have no date" rather than as another deadline bucket. */
+.tp-due-section-none{margin-top:22px}
+.tp-due-section-title.is-none{color:var(--dsw-alias-label-secondary);opacity:.85}
+.tp-due-row.is-undated{border-style:dashed}
+.tp-due-row-nodate{display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary);opacity:.6}
+
+/* --- pagination ----------------------------------------------------------
+   A tab with more rows than PAGE_SIZE is cut into pages; this strip sits under
+   the list. Kept to the left so it never competes with the add controls above. */
+.tp-pager{display:flex;align-items:center;gap:6px;margin-top:8px;padding:0 2px}
+.tp-pager-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:.5px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);cursor:pointer}
+.tp-pager-btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.tp-pager-btn:disabled{opacity:.35;cursor:default}
+.tp-pager-info{font-size:12px;line-height:16px;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary)}
 
 /* --- backup page ---------------------------------------------------------
    One row per snapshot: kind, when, file name, restore. The manual kind is the

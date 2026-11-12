@@ -211,6 +211,16 @@ function TodoPage(props) {
   // auto-save in the effect above.
   const [syncing, setSyncing] = React.useState(false);
   const [notice, setNotice] = React.useState(null);
+
+  // --- pagination -----------------------------------------------------------
+  // A tab that holds a pile of rows is cut into pages of PAGE_SIZE. The page is
+  // remembered per tab, not per group, so moving between projects keeps the
+  // reader in the same depth of the list. Kept in React state (not the data
+  // file): which page you are looking at is a view position, not content.
+  const [pages, setPages] = React.useState({});
+  const pageFor = (tabKey) => pages[tabKey] || 0;
+  const setPageFor = (tabKey, value) =>
+    setPages((prev) => (prev[tabKey] === value ? prev : { ...prev, [tabKey]: value }));
   // The backup page: one snapshot being written, one snapshot being restored.
   const [backingUp, setBackingUp] = React.useState(false);
   const [restoring, setRestoring] = React.useState(null);
@@ -533,6 +543,7 @@ function TodoPage(props) {
     editingId, editDraft, setEditDraft,
     searching, matches, visibleInSearch,
     tabFor, setTabFor, draftFor, setDraftFor, groupAnchor,
+    pageFor, setPageFor,
     addTodo, addNote, jumpToGroup, reorderProject: reorderProjects,
     removeTodo, removeProject, restoreRecord: restore,
     deleteForever: deleteForeverRecord, emptyTrash: emptyAll,

@@ -96,7 +96,6 @@ function renderGroup(group, api) {
   const emptyBlock = shown.length === 0 && !groupHit
     ? h('div', { className: 'tp-empty' }, h('strong', null, emptyTitle), emptyHint)
     : null;
-
   // The "All" tab hides finished todos through this toggle rather than through
   // the global search switch: they are separate questions ("show the archive
   // here" vs "match the archive too").
@@ -156,6 +155,40 @@ function renderGroup(group, api) {
   // Only the combined tab mixes kinds, so only there does a row need a badge.
   const rowOptions = { withKind: isAllTab && !api.searching };
 
+  // --- paging ---------------------------------------------------------------
+  // Search results are cut too: a search that matches two hundred rows is the
+  // same wall as a long tab. The page key carries the group id so moving to
+  // another project does not inherit the previous one's page number, while the
+  // same group's other tabs each keep their own.
+  const pageKey = groupKey(group.id) + ':' + (api.searching ? 'search' : tab);
+  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const page = Math.min(api.pageFor(pageKey), pageCount - 1);
+  const offset = page * PAGE_SIZE;
+  const pageRows = pageCount > 1 ? shown.slice(offset, offset + PAGE_SIZE) : shown;
+  const pager = pageCount > 1
+    ? h('div', { className: 'tp-pager' },
+        h('button', {
+          type: 'button',
+          className: 'tp-pager-btn',
+          disabled: page === 0,
+          title: t('pagePrev'),
+          'aria-label': t('pagePrev'),
+          onClick: () => api.setPageFor(pageKey, page - 1),
+        }, h(ChevronLeftIcon, { size: 13 })),
+        h('span', { className: 'tp-pager-info' },
+          t('pageOf')
+            .replace('{page}', String(page + 1))
+            .replace('{pages}', String(pageCount))),
+        h('button', {
+          type: 'button',
+          className: 'tp-pager-btn',
+          disabled: page >= pageCount - 1,
+          title: t('pageNext'),
+          'aria-label': t('pageNext'),
+          onClick: () => api.setPageFor(pageKey, page + 1),
+        }, h(ChevronRightIcon, { size: 13 })))
+    : null;
+
   return h('section', { key: groupKey(group.id), id: groupAnchor(group.id), className: 'tp-group' },
     // One header row, three columns: tabs on the left, the project name in the
     // middle, the add controls on the right (when the tab has them).
@@ -175,6 +208,7 @@ function renderGroup(group, api) {
     doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
     h('div', { className: 'tp-group-body' },
       h('ul', { className: 'tp-todos' + (isAllTab ? ' is-mixed' : '') },
-        shown.map((item) => renderRow(item, api, rowOptions))),
+        pageRows.map((item) => renderRow(item, api, rowOptions))),
+      pager,
       emptyBlock));
 }

@@ -13,6 +13,16 @@ function PlusIcon({ size = 13 }) {
     h('path', { d: 'M8 3v10M3 8h10', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' }));
 }
 
+function ChevronLeftIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('path', { d: 'M10 3.5L5.5 8 10 12.5', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+}
+
+function ChevronRightIcon({ size = 13 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
+    h('path', { d: 'M6 3.5L10.5 8 6 12.5', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+}
+
 function TrashIcon({ size = 14 }) {
   return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true },
     h('path', { d: 'M2.5 4h11M6 4V2.5h4V4M4 4l.7 9a1 1 0 001 .9h4.6a1 1 0 001-.9L12 4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }));

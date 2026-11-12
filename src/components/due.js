@@ -12,7 +12,9 @@
  * retyping what is already on the board.
  */
 
-/** Every open todo with a deadline, earliest first. */
+/**
+ * Every open todo with a deadline, earliest first.
+ */
 function dueItems(state) {
   return state.todos
     .filter((item) => !isEntry(item) && !item.done && item.due)
@@ -21,6 +23,16 @@ function dueItems(state) {
       // Same day: keep the board's order so the list is not shuffled by a tie.
       return state.todos.indexOf(a) - state.todos.indexOf(b);
     });
+}
+
+/**
+ * Every open todo with no deadline, in board order. They sit at the bottom of
+ * the page under their own heading: a todo that never got a date is the one
+ * most likely to be forgotten, and a page that answers "what is due" should also
+ * show what has quietly escaped being due at all.
+ */
+function undatedItems(state) {
+  return state.todos.filter((item) => !isEntry(item) && !item.done && !item.due);
 }
 
 /**
@@ -59,8 +71,11 @@ function dueRow(item, api) {
     : null;
   const projectName = project ? project.name : api.t('noProject');
 
-  return h('li', { key: item.id, className: 'tp-due-row' },
-    h('span', { className: 'tp-due-row-date' }, h(CalendarIcon, { size: 12 }), shortDate(item.due)),
+  return h('li', { key: item.id, className: 'tp-due-row' + (item.due ? '' : ' is-undated') },
+    h('span', { className: 'tp-due-row-date' },
+      item.due
+        ? [h(CalendarIcon, { key: 'i', size: 12 }), shortDate(item.due)]
+        : h('span', { className: 'tp-due-row-nodate' }, h(CalendarIcon, { size: 12 }))),
     h('span', { className: 'tp-due-row-text' }, item.text),
     h('button', {
       type: 'button',
@@ -78,6 +93,7 @@ function dueRow(item, api) {
 function renderDue(api) {
   const { t, state, setView } = api;
   const items = dueItems(state);
+  const undated = undatedItems(state);
   const counts = { overdue: 0, today: 0, week: 0, later: 0 };
   items.forEach((item) => { counts[bucketOf(item.due)] += 1; });
 
@@ -89,6 +105,18 @@ function renderDue(api) {
         h('span', { className: 'tp-due-section-count' }, String(counts[bucket.key]))),
       h('ul', { className: 'tp-due-list' },
         items.filter((item) => bucketOf(item.due) === bucket.key).map((item) => dueRow(item, api)))));
+
+  // The undated block always comes last, and only when there is something in it:
+  // an empty "no due date" heading would just be noise under a healthy list.
+  const undatedSection = undated.length
+    ? h('section', { key: 'none', className: 'tp-due-section tp-due-section-none' },
+        h('h2', { className: 'tp-due-section-title is-none' },
+          t('dueGroupNone'),
+          h('span', { className: 'tp-due-section-count' }, String(undated.length))),
+        h('ul', { className: 'tp-due-list' }, undated.map((item) => dueRow(item, api))))
+    : null;
+
+  const total = items.length + undated.length;
 
   return h('div', { className: 'tp-content' },
     h('header', { className: 'tp-head tp-head-row' },
@@ -105,7 +133,7 @@ function renderDue(api) {
           className: 'tp-btn',
           onClick: () => setView('board'),
         }, t('back')))),
-    items.length === 0
+    total === 0
       ? h('div', { className: 'tp-empty' }, h('strong', null, t('dueViewEmpty')), t('dueViewEmptyHint'))
-      : sections);
+      : h('div', null, sections, undatedSection));
 }
