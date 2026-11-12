@@ -36,6 +36,23 @@ function undatedItems(state) {
 }
 
 /**
+ * The undated items cut up by project, in exactly the order the board shows
+ * them: the default group first, then each live project in its stored order,
+ * and within a project the items in board order. The two lists disagree
+ * otherwise (the due page is date-first, the board is project-first), and a
+ * "no date" list that shuffled the projects would make the page feel out of
+ * sync with the home view.
+ */
+function undatedGroups(state, defaultName) {
+  return groupList(state, defaultName)
+    .map((group) => ({
+      group,
+      items: undatedItems(state).filter((item) => projectIdOf(item) === group.id),
+    }))
+    .filter((entry) => entry.items.length > 0);
+}
+
+/**
  * The groups the list is cut into. Overdue first, then today, then the rest by
  * day: the top of the page is what hurts.
  */
@@ -93,7 +110,6 @@ function dueRow(item, api) {
 function renderDue(api) {
   const { t, state, setView } = api;
   const items = dueItems(state);
-  const undated = undatedItems(state);
   const counts = { overdue: 0, today: 0, week: 0, later: 0 };
   items.forEach((item) => { counts[bucketOf(item.due)] += 1; });
 
@@ -108,15 +124,23 @@ function renderDue(api) {
 
   // The undated block always comes last, and only when there is something in it:
   // an empty "no due date" heading would just be noise under a healthy list.
-  const undatedSection = undated.length
+  // It is cut up by project (default group first, then each live project in
+  // board order), because the board is project-first and a "no date" list that
+  // shuffled the projects would feel out of sync with the home view.
+  const undatedEntries = undatedGroups(state, t('noProject'));
+  const undatedSection = undatedEntries.length
     ? h('section', { key: 'none', className: 'tp-due-section tp-due-section-none' },
         h('h2', { className: 'tp-due-section-title is-none' },
           t('dueGroupNone'),
-          h('span', { className: 'tp-due-section-count' }, String(undated.length))),
-        h('ul', { className: 'tp-due-list' }, undated.map((item) => dueRow(item, api))))
+          h('span', { className: 'tp-due-section-count' },
+            String(undatedEntries.reduce((sum, entry) => sum + entry.items.length, 0)))),
+        undatedEntries.map((entry) =>
+          h('div', { key: entry.group.id ?? NO_PROJECT, className: 'tp-due-undated-group' },
+            h('h3', { className: 'tp-due-undated-title' }, entry.group.name),
+            h('ul', { className: 'tp-due-list' }, entry.items.map((item) => dueRow(item, api))))))
     : null;
 
-  const total = items.length + undated.length;
+  const total = items.length + undatedItems(state).length;
 
   return h('div', { className: 'tp-content' },
     h('header', { className: 'tp-head tp-head-row' },
