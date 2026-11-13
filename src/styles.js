@@ -94,12 +94,16 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-search-input::-webkit-search-cancel-button{display:none}
 .tp-search-clear{position:absolute;right:5px}
 .tp-group{border:.5px solid var(--dsw-alias-border-l2);border-radius:14px;background:var(--dsw-alias-bg-layer-1);margin-bottom:14px;overflow:hidden;scroll-margin-top:16px}
-.tp-group-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;padding:8px 12px;border-bottom:.5px solid var(--dsw-alias-border-l1)}
+.tp-group-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 12px;border-bottom:.5px solid var(--dsw-alias-border-l1)}
 .tp-group-side{display:flex;align-items:center;min-width:0}
 .tp-group-side-left{justify-content:flex-start}
-.tp-group-side-right{justify-content:flex-end}
-.tp-group-center{display:flex;align-items:center;justify-content:center;min-width:0}
-.tp-group-title{min-width:0;margin:0;text-align:center;font-size:15px;font-weight:600;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-group-side-right{justify-content:flex-end;gap:10px}
+/* The right cluster holds the project name just left of the add field, so the
+   name reads as the caption of the field. The name cell is allowed to shrink and
+   ellipsis before the field gives up width. */
+.tp-group-head-right{display:flex;align-items:center;gap:10px;min-width:0;max-width:100%}
+.tp-group-title-cell{display:flex;align-items:center;min-width:0;flex:0 1 auto;max-width:16em}
+.tp-group-title{min-width:0;margin:0;text-align:left;font-size:14px;font-weight:600;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 /* The title becomes editable: a pencil fades in on hover, and the title itself
    is the double-click target. The wrapper keeps the flex centring and reveals
    the button only on hover/focus so a quiet board stays quiet. */
@@ -109,7 +113,7 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-group-rename-btn{opacity:0;transition:opacity .12s;width:22px;height:22px}
 .tp-group-title-wrap.can-rename:hover .tp-group-rename-btn,
 .tp-group-rename-btn:focus-visible{opacity:1}
-.tp-group-title-input{min-width:0;width:auto;max-width:260px;height:28px;font-size:15px;font-weight:600;text-align:center;padding:0 8px;border-radius:8px}
+.tp-group-title-input{min-width:0;width:auto;max-width:220px;height:28px;font-size:14px;font-weight:600;text-align:left;padding:0 8px;border-radius:8px}
 .tp-icon-btn{flex:none;width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
 .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}

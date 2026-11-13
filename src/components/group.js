@@ -240,8 +240,14 @@ function renderGroup(group, api) {
     : null;
 
   return h('section', { key: groupKey(group.id), id: groupAnchor(group.id), className: 'tp-group' },
-    // One header row, three columns: tabs on the left, the project name in the
-    // middle, the add controls on the right (when the tab has them).
+    // Header: tabs on the left, then a spacer, then the add controls with the
+    // project name sitting just left of the add field. The name stays next to the
+    // field instead of floating in the middle, so the project it names reads as
+    // the caption of what you are about to add there. Archiving is a drag on the
+    // nav row, not a button here, so a finished project leaves the same way a
+    // deleted one does. Real projects can be renamed in place: double-click the
+    // name (or click the pencil that appears on hover); the default group cannot,
+    // because it is the slot for everything without a project, not a project.
     h('div', { className: 'tp-group-head' + (shown.length === 0 ? ' is-empty' : '') },
       h('div', { className: 'tp-group-side tp-group-side-left' },
         h('div', { className: 'tp-tabs', role: 'tablist' },
@@ -249,13 +255,10 @@ function renderGroup(group, api) {
           tabButton(TAB_ACTIVE, t('tabActive'), active.length),
           tabButton(TAB_DONE, t('tabDone'), done.length),
           tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
-      // The name is the whole centre column: archiving is a drag on the nav row,
-      // not a button here, so a finished project leaves the same way a deleted
-      // one does. Real projects can be renamed in place: double-click the title
-      // (or click the pencil that appears on hover); the default group cannot,
-      // because it is the slot for everything without a project, not a project.
-      h('div', { className: 'tp-group-center' }, groupTitle(group, api)),
-      h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
+      h('div', { className: 'tp-group-side tp-group-side-right' },
+        h('div', { className: 'tp-group-head-right' },
+          h('div', { className: 'tp-group-title-cell' }, groupTitle(group, api)),
+          addControls))),
     doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
     h('div', { className: 'tp-group-body' },
       h('ul', { className: 'tp-todos' + (isAllTab ? ' is-mixed' : '') },

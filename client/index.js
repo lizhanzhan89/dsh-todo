@@ -79,7 +79,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-13.1';
+    const BUILD = '2026-11-13.2';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -887,12 +887,16 @@ window.__ModuleLoader__.load({
     .tp-search-input::-webkit-search-cancel-button{display:none}
     .tp-search-clear{position:absolute;right:5px}
     .tp-group{border:.5px solid var(--dsw-alias-border-l2);border-radius:14px;background:var(--dsw-alias-bg-layer-1);margin-bottom:14px;overflow:hidden;scroll-margin-top:16px}
-    .tp-group-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;padding:8px 12px;border-bottom:.5px solid var(--dsw-alias-border-l1)}
+    .tp-group-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 12px;border-bottom:.5px solid var(--dsw-alias-border-l1)}
     .tp-group-side{display:flex;align-items:center;min-width:0}
     .tp-group-side-left{justify-content:flex-start}
-    .tp-group-side-right{justify-content:flex-end}
-    .tp-group-center{display:flex;align-items:center;justify-content:center;min-width:0}
-    .tp-group-title{min-width:0;margin:0;text-align:center;font-size:15px;font-weight:600;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tp-group-side-right{justify-content:flex-end;gap:10px}
+    /* The right cluster holds the project name just left of the add field, so the
+       name reads as the caption of the field. The name cell is allowed to shrink and
+       ellipsis before the field gives up width. */
+    .tp-group-head-right{display:flex;align-items:center;gap:10px;min-width:0;max-width:100%}
+    .tp-group-title-cell{display:flex;align-items:center;min-width:0;flex:0 1 auto;max-width:16em}
+    .tp-group-title{min-width:0;margin:0;text-align:left;font-size:14px;font-weight:600;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
     /* The title becomes editable: a pencil fades in on hover, and the title itself
        is the double-click target. The wrapper keeps the flex centring and reveals
        the button only on hover/focus so a quiet board stays quiet. */
@@ -902,7 +906,7 @@ window.__ModuleLoader__.load({
     .tp-group-rename-btn{opacity:0;transition:opacity .12s;width:22px;height:22px}
     .tp-group-title-wrap.can-rename:hover .tp-group-rename-btn,
     .tp-group-rename-btn:focus-visible{opacity:1}
-    .tp-group-title-input{min-width:0;width:auto;max-width:260px;height:28px;font-size:15px;font-weight:600;text-align:center;padding:0 8px;border-radius:8px}
+    .tp-group-title-input{min-width:0;width:auto;max-width:220px;height:28px;font-size:14px;font-weight:600;text-align:left;padding:0 8px;border-radius:8px}
     .tp-icon-btn{flex:none;width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
     .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
     .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
@@ -2206,8 +2210,14 @@ window.__ModuleLoader__.load({
         : null;
 
       return h('section', { key: groupKey(group.id), id: groupAnchor(group.id), className: 'tp-group' },
-        // One header row, three columns: tabs on the left, the project name in the
-        // middle, the add controls on the right (when the tab has them).
+        // Header: tabs on the left, then a spacer, then the add controls with the
+        // project name sitting just left of the add field. The name stays next to the
+        // field instead of floating in the middle, so the project it names reads as
+        // the caption of what you are about to add there. Archiving is a drag on the
+        // nav row, not a button here, so a finished project leaves the same way a
+        // deleted one does. Real projects can be renamed in place: double-click the
+        // name (or click the pencil that appears on hover); the default group cannot,
+        // because it is the slot for everything without a project, not a project.
         h('div', { className: 'tp-group-head' + (shown.length === 0 ? ' is-empty' : '') },
           h('div', { className: 'tp-group-side tp-group-side-left' },
             h('div', { className: 'tp-tabs', role: 'tablist' },
@@ -2215,13 +2225,10 @@ window.__ModuleLoader__.load({
               tabButton(TAB_ACTIVE, t('tabActive'), active.length),
               tabButton(TAB_DONE, t('tabDone'), done.length),
               tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
-          // The name is the whole centre column: archiving is a drag on the nav row,
-          // not a button here, so a finished project leaves the same way a deleted
-          // one does. Real projects can be renamed in place: double-click the title
-          // (or click the pencil that appears on hover); the default group cannot,
-          // because it is the slot for everything without a project, not a project.
-          h('div', { className: 'tp-group-center' }, groupTitle(group, api)),
-          h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
+          h('div', { className: 'tp-group-side tp-group-side-right' },
+            h('div', { className: 'tp-group-head-right' },
+              h('div', { className: 'tp-group-title-cell' }, groupTitle(group, api)),
+              addControls))),
         doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
         h('div', { className: 'tp-group-body' },
           h('ul', { className: 'tp-todos' + (isAllTab ? ' is-mixed' : '') },
