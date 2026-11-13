@@ -148,6 +148,16 @@ function createProject(state, name) {
   return { ...state, projects: state.projects.concat({ id: uid(), name }) };
 }
 
+/** Rename a project in place. Blank names are rejected by the caller. */
+function renameProject(state, projectId, name) {
+  if (!projectId) return state;
+  return {
+    ...state,
+    projects: state.projects.map((project) =>
+      (project.id === projectId ? { ...project, name } : project)),
+  };
+}
+
 /**
  * Deleting a project moves the project and every item it held into the recycle
  * bin as one record, so one restore brings the whole group back.

@@ -11,6 +11,8 @@ const en = {
   noProjectHint: 'Todos that belong to no project.',
   newProject: 'New project',
   projectNamePlaceholder: 'Project name',
+  renameProject: 'Rename project',
+  renameProjectHint: 'Double-click or click the pencil to rename',
   create: 'Create',
   cancel: 'Cancel',
   addTodoPlaceholder: 'Add a todo — Ctrl+Enter saves',

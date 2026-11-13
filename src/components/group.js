@@ -20,6 +20,56 @@ function tabIcon(key) {
 }
 
 /**
+ * The centre title of a group header.
+ *
+ * A real project's name can be edited in place: when its id is the one being
+ * renamed, the title becomes a text field (Enter or blur saves, Escape cancels);
+ * otherwise it is a static heading that also offers a pencil on hover and a
+ * double-click. The fixed default group (id null) has no rename affordance at
+ * all - it is not a project.
+ *
+ * @param {object} group { id, name } — id null for the fixed default group
+ * @param {object} api   page state and transitions
+ */
+function groupTitle(group, api) {
+  const { t, renamingProjectId, projectNameDraft, setProjectNameDraft,
+    startRenameProject, cancelRenameProject, commitRenameProject } = api;
+  const canRename = Boolean(group.id);
+
+  if (canRename && renamingProjectId === group.id) {
+    return h('input', {
+      className: 'tp-input tp-group-title-input',
+      type: 'text',
+      value: projectNameDraft,
+      autoFocus: true,
+      'aria-label': t('renameProject'),
+      onChange: (event) => setProjectNameDraft(event.target.value),
+      onBlur: commitRenameProject,
+      onKeyDown: (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); commitRenameProject(); }
+        if (event.key === 'Escape') { event.preventDefault(); cancelRenameProject(); }
+      },
+    });
+  }
+
+  return h('div', { className: 'tp-group-title-wrap' + (canRename ? ' can-rename' : '') },
+    h('h2', {
+      className: 'tp-group-title',
+      title: canRename ? t('renameProjectHint') : undefined,
+      onDoubleClick: canRename ? () => startRenameProject(group) : undefined,
+    }, group.name),
+    canRename
+      ? h('button', {
+          type: 'button',
+          className: 'tp-icon-btn tp-group-rename-btn',
+          title: t('renameProject'),
+          'aria-label': t('renameProject'),
+          onClick: () => startRenameProject(group),
+        }, h(PencilIcon, { size: 13 }))
+      : null);
+}
+
+/**
  * @param {object} group { id, name } — id null for the fixed default group
  * @param {object} api   page state, transitions and the row api
  */
@@ -201,9 +251,10 @@ function renderGroup(group, api) {
           tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
       // The name is the whole centre column: archiving is a drag on the nav row,
       // not a button here, so a finished project leaves the same way a deleted
-      // one does.
-      h('div', { className: 'tp-group-center' },
-        h('h2', { className: 'tp-group-title' }, group.name)),
+      // one does. Real projects can be renamed in place: double-click the title
+      // (or click the pencil that appears on hover); the default group cannot,
+      // because it is the slot for everything without a project, not a project.
+      h('div', { className: 'tp-group-center' }, groupTitle(group, api)),
       h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
     doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
     h('div', { className: 'tp-group-body' },

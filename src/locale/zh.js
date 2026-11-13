@@ -9,6 +9,8 @@ const zh = {
   noProjectHint: '不属于任何项目的待办。',
   newProject: '新建项目',
   projectNamePlaceholder: '项目名称',
+  renameProject: '重命名项目',
+  renameProjectHint: '双击或点击铅笔重命名项目',
   create: '创建',
   cancel: '取消',
   addTodoPlaceholder: '添加待办，Ctrl+回车保存',

@@ -100,6 +100,16 @@ label.tp-nav-data-btn{cursor:pointer}
 .tp-group-side-right{justify-content:flex-end}
 .tp-group-center{display:flex;align-items:center;justify-content:center;min-width:0}
 .tp-group-title{min-width:0;margin:0;text-align:center;font-size:15px;font-weight:600;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The title becomes editable: a pencil fades in on hover, and the title itself
+   is the double-click target. The wrapper keeps the flex centring and reveals
+   the button only on hover/focus so a quiet board stays quiet. */
+.tp-group-title-wrap{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:100%}
+.tp-group-title-wrap.can-rename .tp-group-title{cursor:text;border-radius:6px;padding:1px 4px;margin:-1px -4px}
+.tp-group-title-wrap.can-rename .tp-group-title:hover{background:var(--dsw-alias-bg-layer-2)}
+.tp-group-rename-btn{opacity:0;transition:opacity .12s;width:22px;height:22px}
+.tp-group-title-wrap.can-rename:hover .tp-group-rename-btn,
+.tp-group-rename-btn:focus-visible{opacity:1}
+.tp-group-title-input{min-width:0;width:auto;max-width:260px;height:28px;font-size:15px;font-weight:600;text-align:center;padding:0 8px;border-radius:8px}
 .tp-icon-btn{flex:none;width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
 .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}

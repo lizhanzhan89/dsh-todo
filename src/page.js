@@ -40,6 +40,11 @@ function TodoPage(props) {
   // Inline editing: the id of the row being edited and its draft text.
   const [editingId, setEditingId] = React.useState(null);
   const [editDraft, setEditDraft] = React.useState('');
+  // Inline project rename: the id of the project whose header title is being
+  // edited and its draft name. Only the fixed default group (id null) is not
+  // renameable, so this stays null most of the time.
+  const [renamingProjectId, setRenamingProjectId] = React.useState(null);
+  const [projectNameDraft, setProjectNameDraft] = React.useState('');
   // Drag-and-drop project reordering inside the quick-jump nav.
   const [dragId, setDragId] = React.useState(null);
   const [dropId, setDropId] = React.useState(null);
@@ -180,6 +185,26 @@ function TodoPage(props) {
     if (!text) { cancelEdit(); return; }
     update((prev) => renameItem(prev, editingId, text));
     cancelEdit();
+  };
+
+  // --- renaming a project ---------------------------------------------------
+  // The project name is edited in its own group header: double-click the title
+  // (or use the pencil) and it becomes a field. Blank or unchanged just closes;
+  // only the fixed default group is not renameable.
+  const startRenameProject = (project) => {
+    if (!project || !project.id) return;
+    setRenamingProjectId(project.id);
+    setProjectNameDraft(project.name);
+  };
+  const cancelRenameProject = () => {
+    setRenamingProjectId(null);
+    setProjectNameDraft('');
+  };
+  const commitRenameProject = () => {
+    if (renamingProjectId === null) return;
+    const name = projectNameDraft.trim();
+    if (name) update((prev) => renameProject(prev, renamingProjectId, name));
+    cancelRenameProject();
   };
 
   // --- deleting and restoring ----------------------------------------------
@@ -541,6 +566,8 @@ function TodoPage(props) {
     archived, archiveProject, unarchiveProject, dueCount,
     creatingProject, setCreatingProject, projectDraft, setProjectDraft,
     editingId, editDraft, setEditDraft,
+    renamingProjectId, projectNameDraft, setProjectNameDraft,
+    startRenameProject, cancelRenameProject, commitRenameProject,
     searching, matches, visibleInSearch,
     tabFor, setTabFor, draftFor, setDraftFor, groupAnchor,
     pageFor, setPageFor,

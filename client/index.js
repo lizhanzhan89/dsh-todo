@@ -79,7 +79,7 @@ window.__ModuleLoader__.load({
      * a fix "does not apply" this number says whether the browser got the new code
      * at all. It is a diagnostic, not a release number.
      */
-    const BUILD = '2026-11-12.3';
+    const BUILD = '2026-11-13.1';
 
     /* ---------------------------------------------------------------------- */
     /* src/locale/en.js                                                       */
@@ -97,6 +97,8 @@ window.__ModuleLoader__.load({
       noProjectHint: 'Todos that belong to no project.',
       newProject: 'New project',
       projectNamePlaceholder: 'Project name',
+      renameProject: 'Rename project',
+      renameProjectHint: 'Double-click or click the pencil to rename',
       create: 'Create',
       cancel: 'Cancel',
       addTodoPlaceholder: 'Add a todo — Ctrl+Enter saves',
@@ -251,6 +253,8 @@ window.__ModuleLoader__.load({
       noProjectHint: '不属于任何项目的待办。',
       newProject: '新建项目',
       projectNamePlaceholder: '项目名称',
+      renameProject: '重命名项目',
+      renameProjectHint: '双击或点击铅笔重命名项目',
       create: '创建',
       cancel: '取消',
       addTodoPlaceholder: '添加待办，Ctrl+回车保存',
@@ -889,6 +893,16 @@ window.__ModuleLoader__.load({
     .tp-group-side-right{justify-content:flex-end}
     .tp-group-center{display:flex;align-items:center;justify-content:center;min-width:0}
     .tp-group-title{min-width:0;margin:0;text-align:center;font-size:15px;font-weight:600;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* The title becomes editable: a pencil fades in on hover, and the title itself
+       is the double-click target. The wrapper keeps the flex centring and reveals
+       the button only on hover/focus so a quiet board stays quiet. */
+    .tp-group-title-wrap{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:100%}
+    .tp-group-title-wrap.can-rename .tp-group-title{cursor:text;border-radius:6px;padding:1px 4px;margin:-1px -4px}
+    .tp-group-title-wrap.can-rename .tp-group-title:hover{background:var(--dsw-alias-bg-layer-2)}
+    .tp-group-rename-btn{opacity:0;transition:opacity .12s;width:22px;height:22px}
+    .tp-group-title-wrap.can-rename:hover .tp-group-rename-btn,
+    .tp-group-rename-btn:focus-visible{opacity:1}
+    .tp-group-title-input{min-width:0;width:auto;max-width:260px;height:28px;font-size:15px;font-weight:600;text-align:center;padding:0 8px;border-radius:8px}
     .tp-icon-btn{flex:none;width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
     .tp-icon-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary)}
     .tp-icon-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}
@@ -1548,6 +1562,16 @@ window.__ModuleLoader__.load({
       return { ...state, projects: state.projects.concat({ id: uid(), name }) };
     }
 
+    /** Rename a project in place. Blank names are rejected by the caller. */
+    function renameProject(state, projectId, name) {
+      if (!projectId) return state;
+      return {
+        ...state,
+        projects: state.projects.map((project) =>
+          (project.id === projectId ? { ...project, name } : project)),
+      };
+    }
+
     /**
      * Deleting a project moves the project and every item it held into the recycle
      * bin as one record, so one restore brings the whole group back.
@@ -1962,6 +1986,56 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * The centre title of a group header.
+     *
+     * A real project's name can be edited in place: when its id is the one being
+     * renamed, the title becomes a text field (Enter or blur saves, Escape cancels);
+     * otherwise it is a static heading that also offers a pencil on hover and a
+     * double-click. The fixed default group (id null) has no rename affordance at
+     * all - it is not a project.
+     *
+     * @param {object} group { id, name } — id null for the fixed default group
+     * @param {object} api   page state and transitions
+     */
+    function groupTitle(group, api) {
+      const { t, renamingProjectId, projectNameDraft, setProjectNameDraft,
+        startRenameProject, cancelRenameProject, commitRenameProject } = api;
+      const canRename = Boolean(group.id);
+
+      if (canRename && renamingProjectId === group.id) {
+        return h('input', {
+          className: 'tp-input tp-group-title-input',
+          type: 'text',
+          value: projectNameDraft,
+          autoFocus: true,
+          'aria-label': t('renameProject'),
+          onChange: (event) => setProjectNameDraft(event.target.value),
+          onBlur: commitRenameProject,
+          onKeyDown: (event) => {
+            if (event.key === 'Enter') { event.preventDefault(); commitRenameProject(); }
+            if (event.key === 'Escape') { event.preventDefault(); cancelRenameProject(); }
+          },
+        });
+      }
+
+      return h('div', { className: 'tp-group-title-wrap' + (canRename ? ' can-rename' : '') },
+        h('h2', {
+          className: 'tp-group-title',
+          title: canRename ? t('renameProjectHint') : undefined,
+          onDoubleClick: canRename ? () => startRenameProject(group) : undefined,
+        }, group.name),
+        canRename
+          ? h('button', {
+              type: 'button',
+              className: 'tp-icon-btn tp-group-rename-btn',
+              title: t('renameProject'),
+              'aria-label': t('renameProject'),
+              onClick: () => startRenameProject(group),
+            }, h(PencilIcon, { size: 13 }))
+          : null);
+    }
+
+    /**
      * @param {object} group { id, name } — id null for the fixed default group
      * @param {object} api   page state, transitions and the row api
      */
@@ -2143,9 +2217,10 @@ window.__ModuleLoader__.load({
               tabButton(TAB_ENTRIES, t('tabEntries'), noteItems.length))),
           // The name is the whole centre column: archiving is a drag on the nav row,
           // not a button here, so a finished project leaves the same way a deleted
-          // one does.
-          h('div', { className: 'tp-group-center' },
-            h('h2', { className: 'tp-group-title' }, group.name)),
+          // one does. Real projects can be renamed in place: double-click the title
+          // (or click the pencil that appears on hover); the default group cannot,
+          // because it is the slot for everything without a project, not a project.
+          h('div', { className: 'tp-group-center' }, groupTitle(group, api)),
           h('div', { className: 'tp-group-side tp-group-side-right' }, addControls)),
         doneToggle ? h('div', { className: 'tp-group-tools' }, doneToggle) : null,
         h('div', { className: 'tp-group-body' },
@@ -3030,6 +3105,11 @@ window.__ModuleLoader__.load({
       // Inline editing: the id of the row being edited and its draft text.
       const [editingId, setEditingId] = React.useState(null);
       const [editDraft, setEditDraft] = React.useState('');
+      // Inline project rename: the id of the project whose header title is being
+      // edited and its draft name. Only the fixed default group (id null) is not
+      // renameable, so this stays null most of the time.
+      const [renamingProjectId, setRenamingProjectId] = React.useState(null);
+      const [projectNameDraft, setProjectNameDraft] = React.useState('');
       // Drag-and-drop project reordering inside the quick-jump nav.
       const [dragId, setDragId] = React.useState(null);
       const [dropId, setDropId] = React.useState(null);
@@ -3170,6 +3250,26 @@ window.__ModuleLoader__.load({
         if (!text) { cancelEdit(); return; }
         update((prev) => renameItem(prev, editingId, text));
         cancelEdit();
+      };
+
+      // --- renaming a project ---------------------------------------------------
+      // The project name is edited in its own group header: double-click the title
+      // (or use the pencil) and it becomes a field. Blank or unchanged just closes;
+      // only the fixed default group is not renameable.
+      const startRenameProject = (project) => {
+        if (!project || !project.id) return;
+        setRenamingProjectId(project.id);
+        setProjectNameDraft(project.name);
+      };
+      const cancelRenameProject = () => {
+        setRenamingProjectId(null);
+        setProjectNameDraft('');
+      };
+      const commitRenameProject = () => {
+        if (renamingProjectId === null) return;
+        const name = projectNameDraft.trim();
+        if (name) update((prev) => renameProject(prev, renamingProjectId, name));
+        cancelRenameProject();
       };
 
       // --- deleting and restoring ----------------------------------------------
@@ -3531,6 +3631,8 @@ window.__ModuleLoader__.load({
         archived, archiveProject, unarchiveProject, dueCount,
         creatingProject, setCreatingProject, projectDraft, setProjectDraft,
         editingId, editDraft, setEditDraft,
+        renamingProjectId, projectNameDraft, setProjectNameDraft,
+        startRenameProject, cancelRenameProject, commitRenameProject,
         searching, matches, visibleInSearch,
         tabFor, setTabFor, draftFor, setDraftFor, groupAnchor,
         pageFor, setPageFor,
